@@ -1,0 +1,23 @@
+# รัน MariaDB สำหรับ iPlay Workspace ภายในเครื่อง
+#   docker compose up -d
+#   cp .env.example .env && npm run db:init
+services:
+  db:
+    image: mariadb:11
+    container_name: iplay-mariadb
+    restart: unless-stopped
+    environment:
+      MARIADB_ROOT_PASSWORD: rootpass
+      MARIADB_DATABASE: iplay_workspace
+      MARIADB_USER: iplay
+      MARIADB_PASSWORD: iplaypass
+      TZ: Asia/Bangkok
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    ports:
+      - "3306:3306"
+    volumes:
+      - dbdata:/var/lib/mysql
+volumes:
+  dbdata:
