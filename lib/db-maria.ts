@@ -301,10 +301,14 @@ export async function applyMaria(action: Action): Promise<void> {
     case "task.create": {
       const d = action.task;
       const ids = uid("t");
-      const [proj] = d.projectId
-        ? await p.query<Row[]>("SELECT code FROM ws_projects WHERE id=?", [d.projectId])
-        : [[] as Row[], []];
-      const code = `${proj[0]?.code ?? "IPL"}-${Math.floor(1000 + Math.random() * 8999)}`;
+      const prefix = d.projectId
+        ? (await p.query<Row[]>("SELECT code FROM ws_projects WHERE id=?", [d.projectId]))[0][0]?.code ?? "IPL"
+        : "IPL";
+      const [maxRows] = await p.query<Row[]>(
+        "SELECT code FROM ws_tasks WHERE code LIKE ? ORDER BY CAST(SUBSTRING_INDEX(code,'-',-1) AS UNSIGNED) DESC LIMIT 1",
+        [`${prefix}-%`],
+      );
+      const code = `${prefix}-${(Number(maxRows[0]?.code?.split("-").pop()) || 999) + 1}`;
       await p.query(
         `INSERT INTO ws_tasks (id,code,title,description,project_id,assignee_id,status,priority,due_date,estimate_hrs,spent_hrs,progress,tags,ai_generated,blocked,created_by)
          VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
@@ -472,15 +476,19 @@ export async function applyMaria(action: Action): Promise<void> {
       await log(action.actorId, action.text, action.kind);
       break;
     case "reset": {
-      await p.query("SET FOREIGN_KEY_CHECKS=0");
-      for (const t of ["ws_messages", "ws_channels", "ws_task_comments", "ws_task_subtasks", "ws_tasks",
-        "ws_events", "ws_files", "ws_bookings", "ws_rooms", "ws_leaves", "ws_checkins",
-        "ws_ai_runs", "ws_activity", "ws_projects", "ws_members", "ws_settings"]) {
-        await p.query(`TRUNCATE TABLE ${t}`);
-      }
-      await p.query("SET FOREIGN_KEY_CHECKS=1");
       const conn = await p.getConnection();
-      try { await seedDb(conn); } finally { conn.release(); }
+      try {
+        await conn.query("SET FOREIGN_KEY_CHECKS=0");
+        for (const t of ["ws_messages", "ws_channels", "ws_task_comments", "ws_task_subtasks", "ws_tasks",
+          "ws_events", "ws_files", "ws_bookings", "ws_rooms", "ws_leaves", "ws_checkins",
+          "ws_ai_runs", "ws_activity", "ws_projects", "ws_members", "ws_settings"]) {
+          await conn.query(`TRUNCATE TABLE ${t}`);
+        }
+        await conn.query("SET FOREIGN_KEY_CHECKS=1");
+        await seedDb(conn);
+      } finally {
+        conn.release();
+      }
       break;
     }
     default:
