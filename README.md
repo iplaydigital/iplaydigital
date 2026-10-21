@@ -1,11 +1,282 @@
-- 👋 Hi, I’m @iplaydigital
-- 👀 I’m interested in Technology
-- 🌱 I’m currently learning AWS Technology & LINE Dev
-- 💞️ I’m looking to collaborate on Nuxt Js and PHP Powertemplate
-- 📫 How to reach me ...
--  Next project iOT
+# iPlay Workspace — Digital Agency OS
 
-<!---
-iplaydigital/iplaydigital is a ✨ special ✨ repository because its `README.md` (this file) appears on your GitHub profile.
-You can click the Preview link to take a look at your changes.
---->
+ระบบบริหารงานสไตล์ ERP สำหรับ **iPlay Digital** — ปฏิทินเต็มจอ, Kanban, **ทีมงาน AI ที่ทำงานเหมือนคน**, แชททีม + Google Drive, HR (เช็คอิน/ลา/จองห้อง) และเชื่อมจอ LED **Playwall Park Silom**
+
+สร้างด้วย **Next.js 15 (App Router) + TypeScript + Tailwind v4** และ **MariaDB** เป็นฐานข้อมูลหลัก
+แรงบันดาลใจฟีเจอร์ปฏิทิน/Work Tracking จาก [ProAke/mng-erp](https://github.com/ProAke/mng-erp) แล้วต่อยอดเป็น Workspace ที่มี AI เป็นสมาชิกทีมจริง ๆ
+
+> โหมด demo ใช้งานได้ทันทีโดยไม่ต้องมีฐานข้อมูล (เก็บที่ `.data/store.json`)
+> ตั้งค่า `DB_HOST` แล้วระบบสลับไปบันทึกทุกอย่างลง **MariaDB** อัตโนมัติ
+
+---
+
+## ✨ ฟีเจอร์
+
+### 📅 ปฏิทินเต็มจอ (ตัวเด่นของระบบ)
+- **4 มุมมอง**: เดือน / สัปดาห์ / วัน / กำหนดการ (Agenda) — สลับได้ทันที ไม่โหลดใหม่
+- **ลากย้ายอีเวนต์ข้ามวัน** (Drag & Drop) ทั้งในมุมมองเดือน, สัปดาห์, วัน และ agenda
+- **เดดไลน์ของงานทุกชิ้นขึ้นปฏิทินอัตโนมัติ** — สร้างงานใหม่ = มีอีเวนต์เดดไลน์ทันที และลากเดดไลน์เพื่อเลื่อน `due date` ของงานได้โดยตรง
+- **หมวดอีเวนต์ 6 สี**: งาน/เดดไลน์ · ประชุม · ส่งมอบ · การเงิน · วันหยุด · ส่วนตัว (กรองได้ทีละหมวด)
+- **Mini calendar** + ตัวกรองหมวด + รายการ "กำลังจะมาถึง"
+- ปุ่ม **Fullscreen** (Fullscreen API จริง) + แถบเวลาปัจจุบัน (now line) ในมุมมองวัน/สัปดาห์
+- **วันที่ภาษาไทย + พ.ศ.** ทุกจุด (เช่น "พุธ 21 ตุลาคม 2569")
+- คลิกช่องว่างเพื่อเพิ่มนัด, คลิกอีเวนต์เพื่อแก้ไข/ลบ, คลิกเดดไลน์เพื่อเปิดงาน
+
+### ✅ งาน & Kanban
+- บอร์ดลากวาง **4 สถานะ**: รอดำเนินการ → กำลังทำ → ตรวจแก้ → เสร็จแล้ว + มุมมองตาราง
+- รายละเอียดสไตล์ ERP: รหัสงาน (`ERP-1041`), ผู้รับผิดชอบ (คน **หรือ AI**), ความสำคัญ, ชั่วโมงประเมิน,
+  งานย่อยแบบเช็กบ็อกซ์, แท็ก, คอมเมนต์, AI run log, ความคืบหน้า, สถานะ blocker
+- ตัวกรอง: โปรเจกต์ / ความสำคัญ / งานของฉัน / AI รับผิดชอบ + ค้นหา
+- สร้าง/แก้/ลบงาน, เพิ่มงานย่อย, คอมเมนต์ได้ทันที (ทุก mutation บันทึกลง DB + activity log)
+
+### 🤖 AI Workforce (AI ทำงานเหมือนคน)
+- **5 เอเจนต์** พร้อมบทบาทจริง: `NOVA` (Project Coordinator) · `BYTE` (Full-stack Engineer) · `PIXEL` (Creative) · `ECHO` (Comms/QA) · `ORBIT` (Data Analyst)
+- แต่ละเอเจนต์มี: โมเดล, ระดับ autonomy, งานในมือ, จำนวน run, อัตราความสำเร็จ, **โควตา token รายวัน**
+- **มอบงานให้ AI** จากหน้ารายละเอียดงาน / Kanban / AI Workforce → AI เริ่มทำงาน, เปลี่ยนสถานะงาน, บันทึก run log
+- **AI Console**: log แบบ terminal, กรอง running/success/queued, ระยะเวลา + token ที่ใช้ต่อ run
+- **AI ตอบในแชท** ผ่าน `@nova @byte @pixel @echo @orbit` — ใช้ข้อมูลจริง (งานค้าง, ห้องว่าง, ใบลา, ไฟล์ Drive) ในการตอบ
+- พัก/ปลุกเอเจนต์ได้ทันที (pause switch) และตั้งค่าเปิด-ปิด AI ทั้งระบบ
+- พร้อมต่อ LLM จริงผ่าน `AI_GATEWAY_URL` (ถ้าไม่ตั้งจะใช้ context engine ในตัว)
+
+### 💬 บอร์ดแชทด้านขวา (ทุกหน้า) + Google Drive
+- **Dock ขวา** เปิดได้ทุกหน้า: แชท / ไฟล์ / AI (ย่อ-ขยายได้)
+- **กลุ่มงาน + DM + DM กับ AI** สร้างกลุ่มใหม่ได้, unread badge, ซ่อน/เปิด
+- **ปักหมุดข้อความ** (pin) + แถบ pinned ด้านบนห้อง + หน้ารวมข้อความสำคัญ
+- **แชร์เอกสาร Google Drive**: วางลิงก์ หรือเลือกไฟล์ใน Workspace → แสดงเป็นการ์ดไฟล์พร้อมเปิด Drive
+- รีแอ็กชันอิโมจิ, ไฟล์ล่าสุด, สมาชิก, โฟลเดอร์กลางทีม
+- หน้าแชทแบบเต็ม (3 คอลัมน์) สำหรับงานละเอียด
+- **MCP bridge**: ตั้ง `GOOGLE_MCP_URL` → `/api/drive` proxy ไป MCP server (GDrive) โดยตรง
+
+### 🕒 HR: เช็คอิน · ลา · จองห้องประชุม
+- **เช็คอิน / ลงเวลา**: ดึงพิกัดจริงจากเบราว์เซอร์, คำนวณระยะห่างจาก Park Silom ตามรัศมีที่ตั้งไว้,
+  รองรับ **ออฟฟิศ / WFH / นอกสถานที่**, แนบ **Google Maps** ทุกครั้ง, แสดงแผนที่ฝังในหน้า
+- **ระบบลา**: ลาพักร้อน/ป่วย/กิจ/WFH/ไปพบลูกค้า, นับวันอัตโนมัติ, อนุมัติ–ปฏิเสธ,
+  **อนุมัติแล้วสร้างอีเวนต์วันลาเข้าปฏิทินทีมทันที**
+- **จองห้องประชุม**: timeline 08:00–20:00 ต่อห้อง, การ์ดห้อง + สิ่งอำนวยความสะดวก,
+  จองแล้วสร้างอีเวนต์หมวด "ประชุม" ลงปฏิทิน, ยกเลิกได้
+- สรุปภาระงาน + การเข้างานรายสัปดาห์
+
+### 📊 แดชบอร์ด
+- KPI cards (โปรเจกต์, งานคงค้าง, ใกล้เดดไลน์, AI agents)
+- แถบ AI กำลังทำงาน (live waveform), โปรเจกต์เด่นแบบ gradient cards, งานเร่งด่วน
+- **กราฟ SVG ล้วน ไม่มี dependency**: line / bar / donut / workload bars / sparkline
+- ปฏิทินสัปดาห์ย่อ + ฟีดกิจกรรมล่าสุด + สรุป AI utilization
+
+### 🖥️ LED Wall × Playwall Park Silom
+- ฝัง **live preview** จาก `https://playwall-parksilom.pages.dev/` (16:9) พร้อมสถานะการเชื่อมต่อ
+- **`GET /api/led`** — payload พร้อมฉาย (เปิด CORS `*`, ไม่ cache): ประกาศวิ่ง, คิววันนี้, งานด่วน, สถานะ AI, สถิติ
+- **`/led`** — จอสำรอง 1920×1080 (นาฬิกาเรียลไทม์ + คิวฉาย + งานด่วน + AI) ใช้กับ TV/kiosk ได้
+- คัดลอก API / เปิดจอจริงได้จากหน้าเดียว
+
+### ⚙️ อื่น ๆ
+- ค้นหารวมทั้งระบบ (งาน/อีเวนต์/โปรเจกต์) — `⌘K` / `Ctrl+K`
+- ทุก mutation ผ่าน API กลาง `POST /api/action` + activity log
+- ธีม dark premium, ภาษาไทยทั้งระบบ, responsive (dock/แถบข้างปรับตามความกว้าง)
+- นำเข้า/ส่งออก: JSON ทั้งระบบ, CSV งาน, รีเซ็ตข้อมูลตัวอย่าง
+
+### 🧭 เทียบกับ mng-erp (ต้นแบบ)
+| ความสามารถ | mng-erp | iPlay Workspace |
+|---|---|---|
+| ปฏิทิน 4 มุมมอง + drag & drop | ✅ | ✅ (+ now line, fullscreen, deadline → task) |
+| Kanban 4 สถานะ + ตาราง | ✅ | ✅ (+ AI assignee, run log) |
+| เดดไลน์ขึ้นปฏิทินอัตโนมัติ | ✅ | ✅ (สร้าง/ลากอีเวนต์ = อัปเดต `due_date`) |
+| แชทบอร์ดด้านขวา + ปักหมุด + Drive | — | ✅ (dock ทุกหน้า + MCP) |
+| AI agents ทำงานเหมือนคน | — | ✅ (5 เอเจนต์ + console + token) |
+| เช็คอินนอกสถานที่ + Google Maps | — | ✅ (geolocation + รัศมี) |
+| จองห้องประชุม / ลาออนไลน์ | — | ✅ (ผูกปฏิทินทีม) |
+| เชื่อมจอ LED Playwall | — | ✅ (preview + `/api/led` + `/led`) |
+| Stack | Vanilla JS + Express | **Next.js 15 + MariaDB** |
+
+---
+
+## 🚀 เริ่มใช้งาน
+
+### 1) โหมด demo (ไม่ต้องมี DB)
+```bash
+npm install
+npm run dev          # http://localhost:3000
+```
+ข้อมูลตัวอย่างจะถูกสร้างที่ `.data/store.json` โดยอัตโนมัติ (แก้ไข/ลากงานได้จริงและถูกบันทึก)
+
+### 2) โหมด MariaDB (แนะนำสำหรับใช้งานจริง)
+```bash
+# มี MariaDB อยู่แล้ว
+cp .env.example .env
+# แก้ DB_HOST / DB_USER / DB_PASSWORD / DB_NAME
+npm install
+npm run db:init      # สร้าง schema ws_* + seed ครั้งแรก
+npm run dev
+```
+หรือใช้ Docker:
+```bash
+docker compose up -d
+cp .env.example .env
+# DB_USER=iplay  DB_PASSWORD=iplaypass  DB_NAME=iplay_workspace
+npm run db:init
+npm run dev
+```
+
+เมื่อมี `DB_HOST` ระบบจะใช้ MariaDB ทุกเส้นทาง (`/api/bootstrap`, `/api/action`) โดยอัตโนมัติ
+และแสดงสถานะ `MariaDB` ที่ top bar
+
+```bash
+npm run db:seed      # ล้าง + seed ใหม่
+npm run build        # production build
+npm start            # production server
+```
+
+### Environment variables
+| ตัวแปร | จำเป็น | คำอธิบาย |
+|---|---|---|
+| `DB_HOST` / `DB_PORT` | ใช้ MariaDB | ที่อยู่ฐานข้อมูล (ถ้าไม่ตั้ง = demo store) |
+| `DB_USER` / `DB_PASSWORD` / `DB_NAME` | ใช้ MariaDB | ข้อมูลเชื่อมต่อ + ชื่อฐานข้อมูล |
+| `NEXT_PUBLIC_LED_URL` | ไม่ | URL จอ LED (ค่าเริ่มต้น `https://playwall-parksilom.pages.dev/`) |
+| `NEXT_PUBLIC_DRIVE_FOLDER` | ไม่ | โฟลเดอร์กลาง Google Drive ของทีม |
+| `GOOGLE_MCP_URL` | ไม่ | MCP server ของ Google Drive (เช่น `http://localhost:8787`) |
+| `AI_GATEWAY_URL` / `AI_GATEWAY_KEY` | ไม่ | LLM gateway (ถ้าไม่ตั้งใช้ engine ในตัว) |
+| `AI_MODEL` | ไม่ | ชื่อโมเดลเริ่มต้นของ gateway |
+
+---
+
+## 🗄️ สถาปัตยกรรม
+
+```
+┌───────────────────────────────┐
+│  Next.js App Router (client)  │
+│  Dashboard · Calendar · Kanban│
+│  AI Workforce · Chat Dock     │
+│  HR · LED · Settings          │
+└───────────────┬───────────────┘
+                │ fetch (JSON)
+     ┌──────────▼───────────┐        ┌──────────────────────┐
+     │ /api/bootstrap (GET) │───────▶│  lib/store.ts        │
+     │ /api/action   (POST) │        │  ├ demo store (.data)│
+     │ /api/ai       (POST) │        │  └ DB adapter        │
+     │ /api/drive    (GET)  │        └──────────┬───────────┘
+     │ /api/led      (GET)  │                   │ mysql2 pool
+     └──────────────────────┘        ┌──────────▼───────────┐
+                                     │ MariaDB  ws_* tables │
+                                     │ utf8mb4 · InnoDB     │
+                                     └──────────────────────┘
+```
+
+### ตาราง MariaDB (prefix `ws_`)
+`ws_members` · `ws_projects` · `ws_tasks` · `ws_task_subtasks` · `ws_task_comments` ·
+`ws_events` · `ws_channels` · `ws_messages` · `ws_files` · `ws_rooms` · `ws_bookings` ·
+`ws_leaves` · `ws_checkins` · `ws_ai_runs` · `ws_activity` · `ws_settings`
+
+- ทุกตารางเป็น **additive / idempotent** (`CREATE TABLE IF NOT EXISTS`) ไม่แตะของเดิม
+- index พร้อมสำหรับ query ปฏิทิน (`event_date`, `due_date`, `status`)
+- ดูสคีมาทั้งหมดที่ [`db/schema.sql`](db/schema.sql)
+
+### API
+| Method | Endpoint | คำอธิบาย |
+|---|---|---|
+| GET | `/api/bootstrap` | ข้อมูลทั้งระบบครั้งเดียว (hydrate SPA) |
+| POST | `/api/action` | ทุก mutation (ย้ายงาน, ลากอีเวนต์, แชท, AI, HR…) → คืน bootstrap ล่าสุด |
+| POST | `/api/ai` | AI agent ตอบโดยอ่านข้อมูลจริง (หรือ proxy ไป gateway) |
+| GET | `/api/drive` | รายการไฟล์ Drive (ผ่าน MCP ถ้าตั้งค่า) |
+| GET | `/api/led` | payload สำหรับจอ LED (CORS `*`) |
+| GET | `/api/health` | health check + storage mode |
+
+`Action` ที่รองรับ: `task.move/update/create/delete/comment/subtask`, `event.move/create/update/delete`,
+`chat.send/pin/react/channel/read`, `agent.toggle/run`, `hr.checkin/leave/leave.decide/booking/booking.cancel`,
+`settings.update`, `activity.add`, `reset`
+
+---
+
+## 🤖 AI ออกแบบอย่างไร
+
+1. **AI เป็น member ในฐานข้อมูล** เหมือนพนักงาน (`kind='ai'`) → มีงาน, หัวหน้า, run log, โควตา token
+2. **การมอบงาน** = `agent.run` → เปลี่ยนสถานะงานเป็น *กำลังทำ*, ผูก `current_task_id`, เขียน `ws_ai_runs`
+3. **การตอบแชท** = `POST /api/ai` → context engine อ่านข้อมูลจริง (งานค้าง/ห้องว่าง/ใบลา/ไฟล์) แล้วสร้างคำตอบภาษาไทย
+   หรือส่งต่อไป LLM gateway ถ้าตั้งค่า (มี fallback อัตโนมัติเมื่อ gateway ล่ม)
+4. **ทุก run ตรวจย้อนหลังได้** — ระยะเวลา, token, สถานะ, งานที่เกี่ยวข้อง
+
+---
+
+## 🖥️ เชื่อมจอ LED (Playwall Park Silom)
+
+1. ตั้ง `NEXT_PUBLIC_LED_URL=https://playwall-parksilom.pages.dev/`
+2. ฝั่ง Playwall เรียก `GET {workspace}/api/led` ทุก 30 วินาที (CORS เปิดให้แล้ว)
+3. payload:
+```json
+{
+  "screen": "iPlay Digital · Park Silom LED",
+  "announce": "โฟกัสสัปดาห์นี้: ปิดงาน Playwall + Deploy เว็บใหม่ 🚀",
+  "todayEvents": [{ "title": "Daily Stand-up", "time": "09:30", "cat": "meeting" }],
+  "urgentTasks": [{ "code": "PLW-2104", "title": "ส่งมอบคอนเทนต์รอบที่ 2", "due": "2026-10-21" }],
+  "aiAgents": [{ "name": "NOVA", "state": "working", "paused": false, "task": "t_02" }],
+  "stats": { "open": 23, "done": 5, "todayDone": 5 }
+}
+```
+4. เปิด `/led` บนทีวีในออฟฟิศ (kiosk): `chromium --kiosk http://<host>/led`
+
+---
+
+## 📁 โครงสร้างโปรเจกต์
+
+```
+iplaydigital/
+├── app/
+│   ├── layout.tsx              # shell + ฟอนต์ไทย + metadata
+│   ├── page.tsx                # SPA entry (AppProvider + Shell)
+│   ├── led/page.tsx            # จอ LED 1920×1080
+│   ├── globals.css             # design system (dark premium)
+│   └── api/
+│       ├── bootstrap/ route.ts
+│       ├── action/ route.ts
+│       ├── ai/ route.ts
+│       ├── drive/ route.ts
+│       ├── led/ route.ts
+│       └── health/ route.ts
+├── components/
+│   ├── providers.tsx           # state, API client, toasts, AI chat hook
+│   ├── shell.tsx               # sidebar + topbar + dock + modals
+│   ├── dashboard.tsx           # KPI, AI strip, charts, mini calendar
+│   ├── calendar-view.tsx       # 4 views + drag & drop + fullscreen
+│   ├── tasks-view.tsx          # kanban + table + filters
+│   ├── task-ui.tsx             # task drawer, new task, event modal, search
+│   ├── ai-workforce.tsx        # AI cards, console, assignment
+│   ├── chat-panel.tsx          # dock + full chat + pins + Drive sharing
+│   ├── hr-view.tsx             # check-in, leave, rooms, team
+│   ├── led-view.tsx            # LED preview/payload + full screen
+│   ├── settings-view.tsx       # org, office, integrations, export
+│   ├── charts.tsx              # SVG charts (no deps)
+│   └── ui.tsx                  # primitives
+├── lib/
+│   ├── types.ts                # domain types + Action union
+│   ├── seed.ts                 # demo workspace (ทีม + AI + งาน + แชท)
+│   ├── store.ts                # demo store + dispatcher
+│   ├── db-maria.ts             # MariaDB adapter (schema, fetchAll, apply)
+│   ├── ai.ts                   # context engine ของ AI agents
+│   └── utils.ts                # วันที่ไทย/พ.ศ., สี, สถานะ
+├── db/schema.sql               # MariaDB schema (ws_*)
+├── scripts/db-init.ts          # npm run db:init
+├── scripts/db-seed.ts          # npm run db:seed
+├── docker-compose.yml          # MariaDB 11 + utf8mb4
+└── .env.example
+```
+
+---
+
+## ⌨️ คีย์ลัด
+| ปุ่ม | การทำงาน |
+|---|---|
+| `⌘K` / `Ctrl+K` | โฟกัสค้นหารวม |
+| `Esc` | ปิด drawer / modal / search |
+| `Enter` | ส่งข้อความแชท (Shift+Enter ขึ้นบรรทัด) |
+| ลากการ์ด / อีเวนต์ | ย้ายสถานะ / ย้ายวัน |
+
+---
+
+## 🗺️ Roadmap
+- [ ] auth จริง (SSO Google Workspace / LINE Login) + RBAC ตามบทบาท
+- [ ] Google Calendar two-way sync และ Drive picker ฝั่ง client
+- [ ] AI ทำงานเบื้องหลังด้วย worker queue + streaming token usage
+- [ ] ใบเสนอราคา/ใบแจ้งหนี้ + VAT (ต่อยอดจาก mng-erp)
+- [ ] รายงานผู้บริหาร + export PDF
+- [ ] push notification (LINE Notify / Web Push) และ native mobile
+
+## License
+MIT © iPlay Digital
