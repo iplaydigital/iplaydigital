@@ -33,7 +33,7 @@ export function TaskDrawer() {
           <div style={{ flex: 1 }}>
             <small className="row" style={{ gap: 6 }}>
               <span style={{ color: project?.color, fontWeight: 700 }}>{project?.code}</span> · {task.code}
-              {task.aiGenerated && <span className="pill" style={{ background: "rgba(53,224,161,.14)", color: "var(--mint)" }}><Sparkles size={9} /> AI สร้าง</span>}
+              {task.aiGenerated && <span className="pill" style={{ background: "rgba(34,199,147,.14)", color: "var(--mint)" }}><Sparkles size={9} /> AI สร้าง</span>}
             </small>
             <h3 style={{ marginTop: 4, fontSize: 16, lineHeight: 1.4 }}>{task.title}</h3>
             <small>{project?.name} · สร้าง {thaiDate(task.createdAt.slice(0, 10), { short: true })}</small>
@@ -45,10 +45,10 @@ export function TaskDrawer() {
           <div className="row" style={{ flexWrap: "wrap" }}>
             <StatusPill status={task.status} />
             <PriorityPill priority={task.priority} />
-            <span className="pill" style={{ background: "rgba(255,255,255,.06)", color: "var(--text-2)" }}>
+            <span className="pill" style={{ background: "var(--tint-2)", color: "var(--text-2)" }}>
               <CalendarDays size={9} /> {relDay(task.due)} · {thaiDate(task.due, { short: true })}
             </span>
-            {task.blocked && <span className="pill" style={{ background: "rgba(255,107,138,.14)", color: "var(--red)" }}>ติด blocker</span>}
+            {task.blocked && <span className="pill" style={{ background: "rgba(255,92,122,.14)", color: "var(--red)" }}>ติด blocker</span>}
           </div>
 
           <div className="task-meta-grid">
@@ -529,7 +529,7 @@ export function GlobalSearch() {
           {tasks.length > 0 && <div className="side-h">งาน</div>}
           {tasks.map((t) => (
             <button key={t.id} className="list-row" onClick={() => { openTask(t.id); setSearch(""); }}>
-              <span className="lr-ico" style={{ background: data.projects.find((p) => p.id === t.projectId)?.color }}>{t.code.split("-")[0]}</span>
+              <span className="lr-ico" style={{ background: data.projects.find((p) => p.id === t.projectId)?.color, color: "#fff" }}>{t.code.split("-")[0]}</span>
               <span className="lr-main"><b>{t.title}</b><small>{t.code} · {STATUS_META[t.status].label} · {relDay(t.due)}</small></span>
               <ChevronRight size={13} opacity={0.4} />
             </button>

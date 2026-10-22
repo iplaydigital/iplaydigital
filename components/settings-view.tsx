@@ -8,7 +8,7 @@ import {
 import { useApp } from "./providers";
 import { Modal } from "./ui";
 import { DbDiagnostics } from "./db-status";
-import { thaiDate } from "../lib/utils";
+import { textOn, thaiDate } from "../lib/utils";
 
 export function SettingsView() {
   const { data, act, toast, refresh } = useApp();
@@ -127,7 +127,7 @@ export function SettingsView() {
           <div className="card-body">
             <div className="setting-row">
               <div className="s-txt"><b>ฐานข้อมูล</b><small>{data.storage === "mariadb" ? "MariaDB — บันทึกทุก mutation ลงตาราง ws_*" : "Demo store (ไฟล์ .data/store.json) — ตั้ง DB_* เพื่อใช้ MariaDB"}</small></div>
-              <span className="pill" style={{ background: data.storage === "mariadb" ? "rgba(53,224,161,.14)" : "rgba(255,194,77,.14)", color: data.storage === "mariadb" ? "var(--mint)" : "var(--amber)" }}>
+              <span className="pill" style={{ background: data.storage === "mariadb" ? "rgba(34,199,147,.14)" : "rgba(255,176,32,.14)", color: data.storage === "mariadb" ? "var(--mint)" : "var(--amber)" }}>
                 <HardDrive size={9} /> {data.storage}
               </span>
             </div>
@@ -160,7 +160,7 @@ export function SettingsView() {
           {data.members.filter((m) => m.kind === "ai").map((a) => (
             <div key={a.id} className="room-card">
               <div className="row" style={{ gap: 8 }}>
-                <span className="avatar ai" style={{ background: a.color, color: "#04121b", borderRadius: 10 }}>{a.initials}</span>
+                <span className="avatar ai" style={{ background: a.color, color: textOn(a.color), borderRadius: 10 }}>{a.initials}</span>
                 <div style={{ flex: 1 }}>
                   <b style={{ fontSize: 12 }}>{a.name}</b>
                   <div className="tiny muted">{a.role}</div>

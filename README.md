@@ -4,6 +4,7 @@
 ระบบบริหารงานสไตล์ ERP สำหรับ **iPlay Digital** — ปฏิทินเต็มจอ, Kanban, **ทีมงาน AI ที่ทำงานเหมือนคน**, แชททีม + Google Drive, HR (เช็คอิน/ลา/จองห้อง) และเชื่อมจอ LED **Playwall Park Silom**
 
 สร้างด้วย **Next.js 15 (App Router) + TypeScript + Tailwind v4** และ **MariaDB** เป็นฐานข้อมูลหลัก
+ดีไซน์ **Light Mode** โทนสี/ฟอนต์อ้างอิงจาก [mng.uarea.in](https://mng.uarea.in) (MNG ERP) — purple/blue พาสเทล บนพื้นขาว ฟอนต์ Prompt
 แรงบันดาลใจฟีเจอร์ปฏิทิน/Work Tracking จาก [ProAke/mng-erp](https://github.com/ProAke/mng-erp) แล้วต่อยอดเป็น Workspace ที่มี AI เป็นสมาชิกทีมจริง ๆ
 
 > โหมด demo ใช้งานได้ทันทีโดยไม่ต้องมีฐานข้อมูล (เก็บที่ `.data/store.json`)
@@ -90,6 +91,28 @@
 
 ---
 
+## 🎨 ธีม Light Mode (พาเลตต์ MNG)
+
+ระบบเป็น **Light Mode ทั้งหมด** — พื้นหลังไล่เฉดฟ้า–ม่วงพาสเทล (แบบหน้า login ของ MNG), การ์ดสีขาว, เส้นขอบบาง `#E9EBF6`
+
+| บทบาท | สี | ใช้ที่ |
+|---|---|---|
+| Primary | `#6C5CE7` (soft `#EFEDFD`) | nav active, ปุ่มหลัก, ลิงก์, งาน/เดดไลน์ |
+| Blue | `#3BA7FF` → `#2F7BF0` | กำลังทำ, ประชุม, ไฟล์ Drive |
+| Mint | `#22C793` | เสร็จแล้ว, ส่งมอบ, AI, อนุมัติ |
+| Amber | `#FFB020` (`#D98A00` สำหรับข้อความ) | ตรวจแก้, การเงิน, รออนุมัติ |
+| Pink | `#FF6B9D` | วันหยุด, now-line, personal |
+| Red | `#FF5C7A` | ด่วนมาก, เลยกำหนด, error |
+| Ink / Muted | `#23264D` / `#8A8FB1` | ข้อความหลัก / รอง |
+| Surface | `#FFFFFF` · `#F6F7FC` · `#F1F2FA` | การ์ด · พื้นหลัง · ชิป |
+| Font | **Prompt** (+ IBM Plex Sans Thai fallback) | ทั้งระบบ |
+
+- สีของสมาชิก/โปรเจกต์/ห้องประชุมที่บันทึกไว้ในฐานข้อมูลชุดเก่าจะถูก **remap อัตโนมัติ** (`lib/utils.ts → remapColor`) — ไม่ต้อง reseed
+- ข้อความบนพื้นสีจะเลือกสีขาว/เข้มอัตโนมัติด้วย `textOn()` เพื่อให้คอนทราสต์ผ่าน
+- จุดที่ยังเข้มอยู่คือ **หน้าตัวอย่างจอ LED** (`/led` frame) เท่านั้น เพราะเป็นพรีวิววิดีโอ
+
+---
+
 ## 🚀 เริ่มใช้งาน
 
 ### 1) โหมด demo (ไม่ต้องมี DB)
@@ -125,6 +148,31 @@ npm run db:seed      # ล้าง + seed ใหม่
 npm run build        # production build
 npm start            # production server
 ```
+
+### ตัวเลือก credentials ของ MariaDB
+รองรับทั้ง 2 ชุด (ทั้งคู่เป็น user บนเซิร์ฟเวอร์เดียวกับเว็บ → `.env` ใช้ `DB_HOST=127.0.0.1`)
+
+| แบบ | DB_USER | DB_PASSWORD | DB_NAME |
+|---|---|---|---|
+| 1 (แนะนำ) | `iplay` | `v0Bl$62s7` | `agency_os` |
+| 2 | `agency_os` | `n_Du!8CzPuqcug58` | `agency_os` |
+
+```bash
+# เขียน .env ด้วย heredoc เสมอ (รหัสมี $ และ ! ซึ่ง bash จะตีความ)
+cat > .env <<'ENVEOF'
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_USER=iplay
+DB_PASSWORD=v0Bl$62s7
+DB_NAME=agency_os
+NEXT_PUBLIC_LED_URL=https://playwall-parksilom.pages.dev/
+NEXT_PUBLIC_DRIVE_FOLDER=https://drive.google.com/drive/folders/1iPlayDigitalWorkspace
+ENVEOF
+chmod 600 .env
+npm run db:doctor -- --init   # ตรวจ + สร้างตาราง ws_*
+pm2 restart <name> --update-env
+```
+> ใน `.env.example` มีทั้งสองชุด (ชุดที่ 2 ถูกคอมเมนต์ไว้) — สลับได้ตามสิทธิ์ที่มีจริง
 
 ### Environment variables
 | ตัวแปร | จำเป็น | คำอธิบาย |

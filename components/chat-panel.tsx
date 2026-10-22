@@ -221,7 +221,7 @@ export function ChatCore({ compact = false }: { compact?: boolean }) {
         <button className="icon-btn" style={{ width: 30, height: 30, position: "relative" }} title="ข้อความปักหมุด" onClick={() => setShowPins(true)}>
           <Pin size={14} />
           {!!pins.length && (
-            <span style={{ position: "absolute", top: -4, right: -4, background: "var(--amber)", color: "#211600", fontSize: 8.5, fontWeight: 800, borderRadius: 20, padding: "0 4px" }}>{pins.length}</span>
+            <span style={{ position: "absolute", top: -4, right: -4, background: "var(--amber)", color: "#7a5200", fontSize: 8.5, fontWeight: 800, borderRadius: 20, padding: "0 4px" }}>{pins.length}</span>
           )}
         </button>
         <button className="icon-btn" style={{ width: 30, height: 30 }} title="โฟลเดอร์ Google Drive ของกลุ่ม" onClick={() => window.open(data.settings.driveFolder, "_blank")}>
@@ -366,7 +366,7 @@ function PinModal({ pins, onClose }: { pins: Message[]; onClose: () => void }) {
     <Modal title="ข้อความที่ปักหมุด" subtitle="เก็บเรื่องสำคัญของทีมไว้บนสุดของห้องแชท" icon={<Pin size={16} />} onClose={onClose}>
       {pins.length ? (
         pins.slice().reverse().map((p) => (
-          <div key={p.id} className="list-row" style={{ alignItems: "flex-start", background: "rgba(255,255,255,.03)" }}>
+          <div key={p.id} className="list-row" style={{ alignItems: "flex-start", background: "var(--tint-1)" }}>
             <Avatar member={map.get(p.authorId)} size="sm" />
             <div className="lr-main">
               <b style={{ whiteSpace: "normal", fontWeight: 500 }}>{p.text || p.file?.name}</b>
@@ -448,7 +448,7 @@ export function ShareDriveModal({
         <span className="label">ไฟล์ล่าสุดใน Workspace</span>
         <div style={{ display: "flex", flexDirection: "column", gap: 6, maxHeight: 240, overflow: "auto" }}>
           {files.map((f) => (
-            <button key={f.id} className="list-row" style={{ background: "rgba(255,255,255,.03)" }} onClick={() => void onShare(f)}>
+            <button key={f.id} className="list-row" style={{ background: "var(--tint-1)" }} onClick={() => void onShare(f)}>
               <FileBadge type={f.type} />
               <span className="lr-main"><b>{f.name}</b><small>{f.size} · Drive</small></span>
               <Paperclip size={13} style={{ opacity: 0.6 }} />
@@ -483,7 +483,7 @@ export function FilesPane() {
       </div>
       <div style={{ overflowY: "auto", padding: "0 10px 12px", display: "flex", flexDirection: "column", gap: 7 }}>
         {files.map((f) => (
-          <a key={f.id} className="file-card" href={f.url} target="_blank" rel="noreferrer" style={{ background: "rgba(255,255,255,.03)", borderColor: "var(--stroke)" }}>
+          <a key={f.id} className="file-card" href={f.url} target="_blank" rel="noreferrer" style={{ background: "var(--tint-1)", borderColor: "var(--stroke)" }}>
             <FileBadge type={f.type} />
             <span style={{ minWidth: 0, flex: 1 }}>
               <b>{f.name}</b>
@@ -514,7 +514,7 @@ export function AiPane() {
       </div>
       <div className="side-label" style={{ padding: "4px 2px" }}>AI agents</div>
       {agents.map((a) => (
-        <div key={a.id} className="list-row" style={{ background: "rgba(255,255,255,.026)" }}>
+        <div key={a.id} className="list-row" style={{ background: "var(--tint-1)" }}>
           <Avatar member={a} size="sm" />
           <div className="lr-main">
             <b>{a.name}</b>
@@ -614,7 +614,7 @@ export function ChatWorkspace() {
           <div className="cp-sec">
             <h4><Pin size={11} /> ข้อความสำคัญ</h4>
             {pins.length ? pins.slice().reverse().map((p) => (
-              <div key={p.id} style={{ marginBottom: 9, paddingBottom: 9, borderBottom: "1px dashed rgba(255,255,255,.07)" }}>
+              <div key={p.id} style={{ marginBottom: 9, paddingBottom: 9, borderBottom: "1px dashed var(--line)" }}>
                 <p style={{ fontSize: 11.5, lineHeight: 1.5 }}>{p.text || p.file?.name}</p>
                 <small className="tiny muted">{data.members.find((m) => m.id === p.authorId)?.name} · {relTime(p.at)}</small>
               </div>
@@ -644,7 +644,7 @@ export function ChatWorkspace() {
               <div key={m.id} className="list-row" style={{ padding: "5px 0" }}>
                 <Avatar member={m} size="sm" />
                 <span className="lr-main"><b style={{ fontSize: 11.5 }}>{m.name}</b><small>{m.role}</small></span>
-                {m.kind === "ai" && <span className="pill" style={{ background: "rgba(53,224,161,.14)", color: "var(--mint)" }}>AI</span>}
+                {m.kind === "ai" && <span className="pill" style={{ background: "rgba(34,199,147,.14)", color: "var(--mint)" }}>AI</span>}
               </div>
             ))}
           </div>

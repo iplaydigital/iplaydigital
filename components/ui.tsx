@@ -6,17 +6,17 @@ import {
   MessageSquare, Paperclip, PaperclipIcon, Pin, Sparkles, Users, X, Zap,
 } from "lucide-react";
 import type { Member, Priority, TaskStatus } from "../lib/types";
-import { PRIORITY_META, STATUS_META, cls } from "../lib/utils";
+import { PRIORITY_META, STATUS_META, cls, textOn } from "../lib/utils";
 
 export function Avatar({
   member, size = "md", title,
 }: { member?: Member | null; size?: "sm" | "md" | "lg"; title?: string }) {
-  if (!member) return <span className={cls("avatar", size)} style={{ background: "#333a55" }}>?</span>;
+  if (!member) return <span className={cls("avatar", size)} style={{ background: "var(--panel-3)" }}>?</span>;
   return (
     <span
       className={cls("avatar", size, member.kind === "ai" && "ai")}
       title={title ?? `${member.name} · ${member.role}`}
-      style={{ background: member.color, color: member.kind === "ai" ? "#04121b" : "#06101f" }}
+      style={{ background: member.color, color: textOn(member.color) }}
     >
       {member.kind === "ai" ? <Bot size={size === "sm" ? 12 : size === "lg" ? 20 : 15} strokeWidth={2.4} /> : member.initials}
     </span>
@@ -59,7 +59,7 @@ export function Modal({
     <div className="overlay center" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
       <div className="modal" style={wide ? { width: "min(760px, 94vw)" } : undefined}>
         <div className="modal-head">
-          <div style={{ width: 34, height: 34, borderRadius: 11, display: "grid", placeItems: "center", background: "rgba(139,124,255,.16)", color: "var(--violet)", flex: "0 0 auto" }}>
+          <div style={{ width: 34, height: 34, borderRadius: 11, display: "grid", placeItems: "center", background: "rgba(108,92,231,.16)", color: "var(--violet)", flex: "0 0 auto" }}>
             {icon ?? <Sparkles size={16} />}
           </div>
           <div style={{ flex: 1 }}>
@@ -94,13 +94,13 @@ export function Empty({ icon, text }: { icon?: React.ReactNode; text: string }) 
 
 export function FileBadge({ type }: { type: string }) {
   const map: Record<string, { label: string; color: string }> = {
-    doc: { label: "DOC", color: "#4C8DFF" },
-    sheet: { label: "XLS", color: "#35E0A1" },
-    slide: { label: "PPT", color: "#FFC24D" },
-    pdf: { label: "PDF", color: "#FF6B8A" },
-    image: { label: "IMG", color: "#FF7BA9" },
-    folder: { label: "DIR", color: "#8B7CFF" },
-    other: { label: "FILE", color: "#9AA7C7" },
+    doc: { label: "DOC", color: "#3BA7FF" },
+    sheet: { label: "XLS", color: "#22C793" },
+    slide: { label: "PPT", color: "#FFB020" },
+    pdf: { label: "PDF", color: "#FF5C7A" },
+    image: { label: "IMG", color: "#FF6B9D" },
+    folder: { label: "DIR", color: "#6C5CE7" },
+    other: { label: "FILE", color: "#8A8FB1" },
   };
   const m = map[type] ?? map.other;
   return (

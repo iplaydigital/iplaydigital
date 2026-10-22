@@ -44,7 +44,7 @@ export function LedView() {
           <p className="tiny muted" style={{ marginTop: 3 }}>เชื่อมจอ LED ผ่าน URL ภายนอก · ข้อมูล Workspace ถูกแปลงเป็น payload พร้อมฉาย</p>
         </div>
         <div className="row">
-          <span className={cls("pill", ok ? "" : "")} style={{ background: ok ? "rgba(53,224,161,.14)" : "rgba(255,107,138,.14)", color: ok ? "var(--mint)" : "var(--red)" }}>
+          <span className={cls("pill", ok ? "" : "")} style={{ background: ok ? "rgba(34,199,147,.14)" : "rgba(255,92,122,.14)", color: ok ? "var(--mint)" : "var(--red)" }}>
             {ok ? <Wifi size={10} /> : <WifiOff size={10} />} {ok ? "เชื่อมต่อแล้ว" : "ยังไม่เชื่อมต่อ"}
           </span>
           <button className="btn btn-sm" onClick={() => void load()} disabled={loading}><RefreshCw size={12} /> รีเฟรช</button>
@@ -160,7 +160,7 @@ export function LedScreen() {
   ];
 
   return (
-    <div style={{ minHeight: "100vh", padding: "32px 44px", display: "flex", flexDirection: "column", gap: 24, background: "radial-gradient(1200px 600px at 70% -10%, rgba(139,124,255,.22), transparent 60%), #05070d" }}>
+    <div style={{ minHeight: "100vh", padding: "32px 44px", display: "flex", flexDirection: "column", gap: 24, background: "radial-gradient(1200px 600px at 70% -10%, rgba(108,92,231,.16), transparent 60%), #f6f7fc" }}>
       <header className="spread">
         <div className="row" style={{ gap: 14 }}>
           <div className="brand-mark" style={{ width: 52, height: 52, fontSize: 18 }}>iP</div>
@@ -193,11 +193,11 @@ export function LedScreen() {
         <div className="card" style={{ padding: 22 }}>
           <div className="card-title" style={{ fontSize: 15, marginBottom: 12 }}>🗓 คิววันนี้</div>
           {today.map((e) => (
-            <div key={e.id} className="row" style={{ gap: 12, padding: "9px 0", borderBottom: "1px solid rgba(255,255,255,.06)", fontSize: 15 }}>
+            <div key={e.id} className="row" style={{ gap: 12, padding: "9px 0", borderBottom: "1px solid var(--tint-2)", fontSize: 15 }}>
               <span style={{ width: 8, height: 8, borderRadius: 9, background: CAT_META[e.cat].color }} />
               <span style={{ width: 66, fontVariantNumeric: "tabular-nums", color: "var(--muted)" }}>{e.time ?? "ทั้งวัน"}</span>
               <span style={{ flex: 1 }}>{e.title}</span>
-              {e.important && <span className="pill" style={{ background: "rgba(255,107,138,.16)", color: "var(--red)" }}>สำคัญ</span>}
+              {e.important && <span className="pill" style={{ background: "rgba(255,92,122,.16)", color: "var(--red)" }}>สำคัญ</span>}
             </div>
           ))}
           {!today.length && <p className="muted">ไม่มีรายการวันนี้</p>}
@@ -231,7 +231,7 @@ export function LedScreen() {
         <div style={{ flex: 1, overflow: "hidden", whiteSpace: "nowrap" }}>
           <span style={{ fontSize: 16 }}>{data.settings.announce}</span>
         </div>
-        <span className="pill" style={{ background: "rgba(139,124,255,.16)", color: "var(--violet)" }}>iPlay Workspace</span>
+        <span className="pill" style={{ background: "rgba(108,92,231,.14)", color: "var(--violet)" }}>iPlay Workspace</span>
       </div>
     </div>
   );

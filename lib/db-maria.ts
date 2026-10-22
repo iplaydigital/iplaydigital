@@ -7,7 +7,7 @@ import type {
 } from "./types";
 import type { StoreData } from "./store";
 import { seedData } from "./seed";
-import { uid, pad } from "./utils";
+import { uid, pad, remapColor } from "./utils";
 
 export const dbEnabled = () => Boolean(process.env.DB_HOST);
 
@@ -191,14 +191,14 @@ export async function fetchAll(): Promise<StoreData> {
   return {
     members: members.map<Member>((m) => ({
       id: m.id, name: m.name, nickname: m.nickname, role: m.role, kind: m.kind,
-      initials: m.initials, color: m.color, email: m.email, state: m.state,
+      initials: m.initials, color: remapColor(m.color) ?? m.color, email: m.email, state: m.state,
       skills: j<string[]>(m.skills, []), model: m.model ?? undefined,
       paused: !!m.paused, autonomy: m.autonomy, runs: m.runs, successRate: m.success_rate,
       tokensToday: m.tokens_today, currentTaskId: m.current_task_id ?? null,
       load: m.workload, capacity: m.capacity, phone: m.phone ?? undefined,
     })),
     projects: projects.map<Project>((r) => ({
-      id: r.id, code: r.code, name: r.name, client: r.client, color: r.color, grad: r.grad,
+      id: r.id, code: r.code, name: r.name, client: r.client, color: remapColor(r.color) ?? r.color, grad: r.grad,
       progress: r.progress, start: r.start, due: r.due, budget: Number(r.budget), spent: Number(r.spent),
       status: r.status, members: j<string[]>(r.members, []),
     })),
@@ -238,7 +238,7 @@ export async function fetchAll(): Promise<StoreData> {
       ownerId: f.owner_id, sharedAt: iso(f.shared_at),
     })),
     rooms: rooms.map<Room>((r) => ({
-      id: r.id, name: r.name, floor: r.floor, capacity: r.capacity, color: r.color,
+      id: r.id, name: r.name, floor: r.floor, capacity: r.capacity, color: remapColor(r.color) ?? r.color,
       amenities: j<string[]>(r.amenities, []), screen: !!r.screen,
     })),
     bookings: bookings.map<Booking>((b) => ({
