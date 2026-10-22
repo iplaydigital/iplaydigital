@@ -1,9 +1,10 @@
 "use client";
 
 import React from "react";
+import { textOn } from "../lib/utils";
 
 export function LineChart({
-  series, labels, colors = ["#8B7CFF", "#35E0A1"], height = 170, yFmt,
+  series, labels, colors = ["#6C5CE7", "#22C793"], height = 170, yFmt,
 }: {
   series: number[][]; labels: string[]; colors?: string[]; height?: number; yFmt?: (v: number) => string;
 }) {
@@ -32,8 +33,8 @@ export function LineChart({
       </defs>
       {[0, 0.25, 0.5, 0.75, 1].map((f) => (
         <g key={f}>
-          <line x1={pad.l} x2={w - pad.r} y1={pad.t + ih * f} y2={pad.t + ih * f} stroke="rgba(255,255,255,.06)" strokeDasharray="3 5" />
-          <text x={pad.l - 6} y={pad.t + ih * f + 3} textAnchor="end" fontSize="8" fill="#626c8a">
+          <line x1={pad.l} x2={w - pad.r} y1={pad.t + ih * f} y2={pad.t + ih * f} stroke="#eef0f8" strokeDasharray="3 5" />
+          <text x={pad.l - 6} y={pad.t + ih * f + 3} textAnchor="end" fontSize="8" fill="#8A8FB1">
             {yFmt ? yFmt(Math.round(max * (1 - f))) : Math.round(max * (1 - f))}
           </text>
         </g>
@@ -43,19 +44,19 @@ export function LineChart({
           <path d={area(vals)} fill={`url(#lg${i})`} />
           <path d={path(vals)} fill="none" stroke={colors[i % colors.length]} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
           {vals.map((v, j) => (
-            <circle key={j} cx={x(j)} cy={y(v)} r="2.6" fill="#0d1120" stroke={colors[i % colors.length]} strokeWidth="1.8" />
+            <circle key={j} cx={x(j)} cy={y(v)} r="2.6" fill="#ffffff" stroke={colors[i % colors.length]} strokeWidth="1.8" />
           ))}
         </g>
       ))}
       {labels.map((l, i) => (
-        <text key={l + i} x={x(i)} y={h - 6} textAnchor="middle" fontSize="8.5" fill="#626c8a">{l}</text>
+        <text key={l + i} x={x(i)} y={h - 6} textAnchor="middle" fontSize="8.5" fill="#8A8FB1">{l}</text>
       ))}
     </svg>
   );
 }
 
 export function BarChart({
-  values, labels, height = 170, color = "#8B7CFF", yFmt,
+  values, labels, height = 170, color = "#6C5CE7", yFmt,
 }: { values: number[]; labels: string[]; height?: number; color?: string; yFmt?: (v: number) => string }) {
   const w = 520;
   const h = height;
@@ -74,8 +75,8 @@ export function BarChart({
       </defs>
       {[0, 0.33, 0.66, 1].map((f) => (
         <g key={f}>
-          <line x1={pad.l} x2={w - pad.r} y1={pad.t + ih * f} y2={pad.t + ih * f} stroke="rgba(255,255,255,.06)" strokeDasharray="3 5" />
-          <text x={pad.l - 6} y={pad.t + ih * f + 3} textAnchor="end" fontSize="8" fill="#626c8a">
+          <line x1={pad.l} x2={w - pad.r} y1={pad.t + ih * f} y2={pad.t + ih * f} stroke="#eef0f8" strokeDasharray="3 5" />
+          <text x={pad.l - 6} y={pad.t + ih * f + 3} textAnchor="end" fontSize="8" fill="#8A8FB1">
             {yFmt ? yFmt(Math.round(max * (1 - f))) : Math.round(max * (1 - f))}
           </text>
         </g>
@@ -86,8 +87,8 @@ export function BarChart({
         return (
           <g key={i}>
             <rect x={bx} y={pad.t + ih - bh} width={bw} height={bh} rx="4" fill="url(#bg1)" />
-            <text x={bx + bw / 2} y={pad.t + ih - bh - 4} textAnchor="middle" fontSize="8" fill="#c3c9de">{v}</text>
-            <text x={bx + bw / 2} y={h - 6} textAnchor="middle" fontSize="8.5" fill="#626c8a">{labels[i]}</text>
+            <text x={bx + bw / 2} y={pad.t + ih - bh - 4} textAnchor="middle" fontSize="8" fill="#454A75">{v}</text>
+            <text x={bx + bw / 2} y={h - 6} textAnchor="middle" fontSize="8.5" fill="#8A8FB1">{labels[i]}</text>
           </g>
         );
       })}
@@ -105,7 +106,7 @@ export function Donut({
   return (
     <div style={{ position: "relative", width: size, height: size }}>
       <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(255,255,255,.06)" strokeWidth="13" />
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#eef0f8" strokeWidth="13" />
         {items.map((it) => {
           const len = (it.value / total) * c;
           const el = (
@@ -141,7 +142,7 @@ export function WorkloadBars({
         const tone = r.value > 95 ? "var(--red)" : r.value > 80 ? "var(--amber)" : "var(--mint)";
         return (
           <div key={r.name} className="row" style={{ gap: 9 }}>
-            <span className="avatar sm" style={{ background: r.color, color: r.ai ? "#04121b" : "#06101f", borderRadius: r.ai ? 8 : 99 }}>
+            <span className="avatar sm" style={{ background: r.color, color: textOn(r.color), borderRadius: r.ai ? 8 : 99 }}>
               {r.ai ? "AI" : r.initials}
             </span>
             <div style={{ flex: 1, minWidth: 0 }}>
@@ -160,7 +161,7 @@ export function WorkloadBars({
   );
 }
 
-export function Spark({ values, color = "#8B7CFF" }: { values: number[]; color?: string }) {
+export function Spark({ values, color = "#6C5CE7" }: { values: number[]; color?: string }) {
   const max = Math.max(...values, 1);
   return (
     <div className="spark">

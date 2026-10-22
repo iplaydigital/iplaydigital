@@ -142,7 +142,7 @@ export function DbFixModal({ onClose }: { onClose: () => void }) {
     >
       {err ? (
         <>
-          <div className="side-card" style={{ borderColor: "rgba(255,107,138,.35)", background: "rgba(255,107,138,.08)" }}>
+          <div className="side-card" style={{ borderColor: "rgba(255,92,122,.35)", background: "rgba(255,92,122,.08)" }}>
             <b style={{ color: "var(--red)" }}><AlertTriangle size={12} /> {err.code}</b>
             <div style={{ fontSize: 11.5, lineHeight: 1.6 }}>{err.message}</div>
           </div>
@@ -186,9 +186,9 @@ export function DbDiagnostics() {
   const [tab, setTab] = useState<"status" | "fix">("status");
   const err = health?.db?.error ?? data?.dbError ?? null;
   const mode = health?.db?.configured === false ? "demo" : health?.db?.ok ? "mariadb" : "fallback";
-  const badge = mode === "mariadb" ? { text: "MariaDB · เชื่อมต่อแล้ว", color: "var(--mint)", bg: "rgba(53,224,161,.14)" }
-    : mode === "demo" ? { text: "Demo store (ยังไม่ตั้งค่า DB)", color: "var(--amber)", bg: "rgba(255,194,77,.14)" }
-    : { text: "Fallback · ต่อ DB ไม่ได้", color: "var(--red)", bg: "rgba(255,107,138,.14)" };
+  const badge = mode === "mariadb" ? { text: "MariaDB · เชื่อมต่อแล้ว", color: "var(--mint)", bg: "rgba(34,199,147,.14)" }
+    : mode === "demo" ? { text: "Demo store (ยังไม่ตั้งค่า DB)", color: "var(--amber)", bg: "rgba(255,176,32,.14)" }
+    : { text: "Fallback · ต่อ DB ไม่ได้", color: "var(--red)", bg: "rgba(255,92,122,.14)" };
 
   return (
     <div className="card">
@@ -224,7 +224,7 @@ export function DbDiagnostics() {
           <>
             {err ? (
               <>
-                <div className="side-card" style={{ borderColor: "rgba(255,107,138,.3)", background: "rgba(255,107,138,.07)", marginBottom: 10 }}>
+                <div className="side-card" style={{ borderColor: "rgba(255,92,122,.3)", background: "rgba(255,92,122,.07)", marginBottom: 10 }}>
                   <b style={{ color: "var(--red)" }}>{err.code}</b>
                   <div style={{ fontSize: 11.5, lineHeight: 1.6 }}>{err.message}</div>
                 </div>
@@ -253,7 +253,7 @@ export function DbDiagnostics() {
 
 function DiagRow({ icon, label, value }: { icon?: React.ReactNode; label: string; value: string }) {
   return (
-    <div className={cls("row")} style={{ gap: 8, padding: "6px 8px", background: "rgba(255,255,255,.03)", borderRadius: 8 }}>
+    <div className={cls("row")} style={{ gap: 8, padding: "6px 8px", background: "var(--tint-1)", borderRadius: 8 }}>
       <span className="muted" style={{ display: "grid", placeItems: "center", width: 16 }}>{icon}</span>
       <span className="tiny muted" style={{ flex: 1 }}>{label}</span>
       <span className="tiny" style={{ fontWeight: 600, maxWidth: 190, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{value}</span>

@@ -8,7 +8,7 @@ import {
 import { useApp } from "./providers";
 import { Avatar, Empty, Meter, PriorityPill, StatusPill } from "./ui";
 import { BarChart, Donut, LineChart, Spark, WorkloadBars } from "./charts";
-import { PRIORITY_META, STATUS_META, STATUS_ORDER, TH_DOW, addDays, d2s, relDay, relTime, startOfWeek, thaiDate, thaiFull, thaiShort, money, cls } from "../lib/utils";
+import { PRIORITY_META, STATUS_META, STATUS_ORDER, TH_DOW, addDays, d2s, relDay, relTime, startOfWeek, thaiDate, thaiFull, thaiShort, money, cls, textOn } from "../lib/utils";
 import { agentStatusText } from "../lib/ai";
 
 export function Dashboard() {
@@ -38,10 +38,10 @@ export function Dashboard() {
     <div className="page">
       {/* ── KPI ─────────────────────────────────────────── */}
       <div className="kpi-grid">
-        <Kpi icon={<FolderKanban size={17} />} grad="var(--grad-violet)" glow="rgba(139,124,255,.3)" value={data.projects.filter((p) => p.status !== "done").length} label="โปรเจกต์ที่กำลังทำ" trend={`+${data.projects.length} ทั้งหมด`} />
-        <Kpi icon={<ListTodo size={17} />} grad="var(--grad-cyan)" glow="rgba(76,195,255,.28)" value={openTasks.length} label={`งานคงค้าง · ${overdue.length} เลยกำหนด`} trend={`${todayDone} ปิดแล้ว`} />
-        <Kpi icon={<Flame size={17} />} grad="var(--grad-amber)" glow="rgba(255,194,77,.28)" value={dueSoon.length} label="ใกล้เดดไลน์ (≤ 3 วัน)" trend={dueSoon.length ? "ต้องเร่ง" : "โล่ง"} down={!dueSoon.length} />
-        <Kpi icon={<Bot size={17} />} grad="var(--grad-mint)" glow="rgba(53,224,161,.3)" value={agents.length} label={`AI agents · ${running.length} กำลังทำงาน`} trend={`${data.aiRuns.filter((r) => r.status === "success").length} runs วันนี้`} />
+        <Kpi icon={<FolderKanban size={17} />} grad="var(--grad-violet)" glow="rgba(108,92,231,.3)" value={data.projects.filter((p) => p.status !== "done").length} label="โปรเจกต์ที่กำลังทำ" trend={`+${data.projects.length} ทั้งหมด`} />
+        <Kpi icon={<ListTodo size={17} />} grad="var(--grad-cyan)" glow="rgba(59,167,255,.28)" value={openTasks.length} label={`งานคงค้าง · ${overdue.length} เลยกำหนด`} trend={`${todayDone} ปิดแล้ว`} />
+        <Kpi icon={<Flame size={17} />} grad="var(--grad-amber)" glow="rgba(255,176,32,.28)" value={dueSoon.length} label="ใกล้เดดไลน์ (≤ 3 วัน)" trend={dueSoon.length ? "ต้องเร่ง" : "โล่ง"} down={!dueSoon.length} />
+        <Kpi icon={<Bot size={17} />} grad="var(--grad-mint)" glow="rgba(34,199,147,.3)" value={agents.length} label={`AI agents · ${running.length} กำลังทำงาน`} trend={`${data.aiRuns.filter((r) => r.status === "success").length} runs วันนี้`} />
       </div>
 
       {/* ── AI strip ────────────────────────────────────── */}
@@ -91,7 +91,7 @@ export function Dashboard() {
               const u = data.members.find((m) => m.id === t.assigneeId);
               return (
                 <button key={t.id} className="list-row" onClick={() => openTask(t.id)}>
-                  <span className="lr-ico" style={{ background: p?.color }}>{p?.code}</span>
+                  <span className="lr-ico" style={{ background: p?.color, color: textOn(p?.color ?? "#6C5CE7") }}>{p?.code}</span>
                   <span className="lr-main">
                     <b>{t.title}</b>
                     <small>{t.code} · <PriorityPill priority={t.priority} /> <span className="muted">{p?.name}</span></small>
@@ -122,13 +122,13 @@ export function Dashboard() {
               <>
                 <LineChart series={[data.trend.created, data.trend.done]} labels={data.trend.labels} />
                 <div className="row" style={{ gap: 14, marginTop: 6, fontSize: 10.5, color: "var(--muted)" }}>
-                  <span><i style={{ display: "inline-block", width: 8, height: 8, borderRadius: 9, background: "#8B7CFF", marginRight: 5 }} />งานสร้างใหม่</span>
-                  <span><i style={{ display: "inline-block", width: 8, height: 8, borderRadius: 9, background: "#35E0A1", marginRight: 5 }} />ปิดงานแล้ว</span>
+                  <span><i style={{ display: "inline-block", width: 8, height: 8, borderRadius: 9, background: "#6C5CE7", marginRight: 5 }} />งานสร้างใหม่</span>
+                  <span><i style={{ display: "inline-block", width: 8, height: 8, borderRadius: 9, background: "#22C793", marginRight: 5 }} />ปิดงานแล้ว</span>
                 </div>
               </>
             ) : (
               <>
-                <BarChart values={data.trend.revenue} labels={data.trend.labels} color="#35E0A1" yFmt={(v) => `฿${v}k`} />
+                <BarChart values={data.trend.revenue} labels={data.trend.labels} color="#22C793" yFmt={(v) => `฿${v}k`} />
                 <div className="row" style={{ marginTop: 6, fontSize: 10.5, color: "var(--muted)" }}>
                   รายได้ต่อเดือน (พันบาท) · ปี {thaiDate(data.today, {}).split(" ").slice(-1)}
                 </div>
@@ -188,7 +188,7 @@ export function Dashboard() {
                   <div className="dow">{TH_DOW[d.getDay()]}</div>
                   <div className="num">{d.getDate()}</div>
                   {evs.slice(0, 3).map((e) => (
-                    <div key={e.id} className="mw-ev" style={{ background: ["work", "meeting", "delivery", "finance", "holiday", "personal"].includes(e.cat) ? { work: "#8B7CFF", meeting: "#4CC3FF", delivery: "#35E0A1", finance: "#FFC24D", holiday: "#FF7BA9", personal: "#9AA7C7" }[e.cat] : "#9AA7C7" }} title={e.title} />
+                    <div key={e.id} className="mw-ev" style={{ background: ["work", "meeting", "delivery", "finance", "holiday", "personal"].includes(e.cat) ? { work: "#6C5CE7", meeting: "#3BA7FF", delivery: "#22C793", finance: "#FFB020", holiday: "#FF6B9D", personal: "#8A8FB1" }[e.cat] : "#8A8FB1" }} title={e.title} />
                   ))}
                   {evs.length > 3 && <div className="tiny muted">+{evs.length - 3}</div>}
                   {!evs.length && <div className="mw-empty">ว่าง</div>}
@@ -287,7 +287,7 @@ function Kpi({
     <div className="kpi" style={{ ["--glow" as string]: glow }}>
       <div className="k-top">
         <span className="kpi-ico" style={{ background: grad }}>{icon}</span>
-        <span className="kpi-trend" style={down ? { background: "rgba(255,255,255,.06)", color: "var(--muted)" } : undefined}>{trend}</span>
+        <span className="kpi-trend" style={down ? { background: "var(--tint-2)", color: "var(--muted)" } : undefined}>{trend}</span>
       </div>
       <div>
         <div className="kpi-val">{value}</div>

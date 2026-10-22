@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 import type { Action, Bootstrap, Message, ActivityItem, CalendarEvent, Task } from "./types";
 import { seedData, trendData } from "./seed";
-import { uid, STATUS_ORDER, CAT_META, pad } from "./utils";
+import { uid, STATUS_ORDER, CAT_META, pad, remapColor } from "./utils";
 import { describeDbError } from "./db-diag";
 
 export type StoreData = Omit<Bootstrap, "trend" | "storage" | "today">;
@@ -362,6 +362,9 @@ export function applyDemoAction(action: Action): StoreData {
 
 export function getDemoBootstrap(): Bootstrap {
   const data = loadStore();
+  data.members.forEach((m) => (m.color = remapColor(m.color) ?? m.color));
+  data.projects.forEach((p) => (p.color = remapColor(p.color) ?? p.color));
+  data.rooms.forEach((r) => (r.color = remapColor(r.color) ?? r.color));
   return {
     ...data,
     today: todayISO(),
@@ -429,5 +432,5 @@ export function statusIndex(s: string) {
 }
 
 export function categoryColor(cat: string) {
-  return CAT_META[cat as keyof typeof CAT_META]?.color ?? "#9AA7C7";
+  return CAT_META[cat as keyof typeof CAT_META]?.color ?? "#8A8FB1";
 }

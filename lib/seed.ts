@@ -10,28 +10,28 @@ const at = (day: string, hh: number, mm = 0) => {
 };
 
 export const TEAM: Member[] = [
-  { id: "u_me", name: "วรพล ศรีสุวรรณ", nickname: "โอ๊ค", role: "Founder / Product Lead", kind: "human", initials: "OP", color: "#8B7CFF", email: "oak@iplaydigital.co", state: "online", skills: ["Product", "Strategy", "AI Ops"], load: 72, capacity: 40, phone: "081-234-5678" },
-  { id: "u_ploy", name: "ณัฐริกา ใจดี", nickname: "พลอย", role: "Project Manager", kind: "human", initials: "PL", color: "#4CC3FF", email: "ploy@iplaydigital.co", state: "focus", skills: ["Agile", "Client Care"], load: 88, capacity: 40, phone: "082-345-6789" },
-  { id: "u_kan", name: "ธนกฤต วัฒนชัย", nickname: "กัน", role: "Senior Developer", kind: "human", initials: "KN", color: "#35E0A1", email: "kan@iplaydigital.co", state: "working", skills: ["Next.js", "MariaDB", "DevOps"], load: 95, capacity: 40, phone: "083-456-7890" },
-  { id: "u_nan", name: "ปวีณา อินทร์ทอง", nickname: "แนน", role: "UI/UX Designer", kind: "human", initials: "NN", color: "#FF7BA9", email: "nan@iplaydigital.co", state: "focus", skills: ["Figma", "Motion", "Design System"], load: 64, capacity: 40, phone: "084-567-8901" },
-  { id: "u_beer", name: "ศุภชัย บุญมาก", nickname: "เบียร์", role: "Full-stack Developer", kind: "human", initials: "BR", color: "#FFC24D", email: "beer@iplaydigital.co", state: "online", skills: ["React", "API", "Realtime"], load: 78, capacity: 40, phone: "085-678-9012" },
-  { id: "u_mint", name: "อารยา พงษ์ไพร", nickname: "มิ้นท์", role: "Marketing Lead", kind: "human", initials: "MT", color: "#FF8A5C", email: "mint@iplaydigital.co", state: "working", skills: ["Content", "Ads", "CRM"], load: 58, capacity: 40, phone: "086-789-0123" },
-  { id: "u_joe", name: "กิตติศักดิ์ ทองแท้", nickname: "โจ", role: "Video / Motion Editor", kind: "human", initials: "JO", color: "#A78BFA", email: "joe@iplaydigital.co", state: "away", skills: ["Premiere", "After Effects"], load: 46, capacity: 40, phone: "087-890-1234" },
-  { id: "u_june", name: "สิริพร แก้วมณี", nickname: "จูน", role: "Finance & Admin", kind: "human", initials: "JN", color: "#4CC3FF", email: "june@iplaydigital.co", state: "online", skills: ["AR/AP", "Payroll"], load: 40, capacity: 40, phone: "088-901-2345" },
+  { id: "u_me", name: "วรพล ศรีสุวรรณ", nickname: "โอ๊ค", role: "Founder / Product Lead", kind: "human", initials: "OP", color: "#6C5CE7", email: "oak@iplaydigital.co", state: "online", skills: ["Product", "Strategy", "AI Ops"], load: 72, capacity: 40, phone: "081-234-5678" },
+  { id: "u_ploy", name: "ณัฐริกา ใจดี", nickname: "พลอย", role: "Project Manager", kind: "human", initials: "PL", color: "#3BA7FF", email: "ploy@iplaydigital.co", state: "focus", skills: ["Agile", "Client Care"], load: 88, capacity: 40, phone: "082-345-6789" },
+  { id: "u_kan", name: "ธนกฤต วัฒนชัย", nickname: "กัน", role: "Senior Developer", kind: "human", initials: "KN", color: "#22C793", email: "kan@iplaydigital.co", state: "working", skills: ["Next.js", "MariaDB", "DevOps"], load: 95, capacity: 40, phone: "083-456-7890" },
+  { id: "u_nan", name: "ปวีณา อินทร์ทอง", nickname: "แนน", role: "UI/UX Designer", kind: "human", initials: "NN", color: "#FF6B9D", email: "nan@iplaydigital.co", state: "focus", skills: ["Figma", "Motion", "Design System"], load: 64, capacity: 40, phone: "084-567-8901" },
+  { id: "u_beer", name: "ศุภชัย บุญมาก", nickname: "เบียร์", role: "Full-stack Developer", kind: "human", initials: "BR", color: "#D98A00", email: "beer@iplaydigital.co", state: "online", skills: ["React", "API", "Realtime"], load: 78, capacity: 40, phone: "085-678-9012" },
+  { id: "u_mint", name: "อารยา พงษ์ไพร", nickname: "มิ้นท์", role: "Marketing Lead", kind: "human", initials: "MT", color: "#FF9A5A", email: "mint@iplaydigital.co", state: "working", skills: ["Content", "Ads", "CRM"], load: 58, capacity: 40, phone: "086-789-0123" },
+  { id: "u_joe", name: "กิตติศักดิ์ ทองแท้", nickname: "โจ", role: "Video / Motion Editor", kind: "human", initials: "JO", color: "#8E7CF3", email: "joe@iplaydigital.co", state: "away", skills: ["Premiere", "After Effects"], load: 46, capacity: 40, phone: "087-890-1234" },
+  { id: "u_june", name: "สิริพร แก้วมณี", nickname: "จูน", role: "Finance & Admin", kind: "human", initials: "JN", color: "#3BA7FF", email: "june@iplaydigital.co", state: "online", skills: ["AR/AP", "Payroll"], load: 40, capacity: 40, phone: "088-901-2345" },
   // ── AI workforce ────────────────────────────────────────────
-  { id: "ai_nova", name: "NOVA", nickname: "Nova", role: "AI Project Coordinator", kind: "ai", initials: "NV", color: "#8B7CFF", email: "nova@ai.iplaydigital.co", state: "working", skills: ["Planning", "Follow-up", "Summarize"], model: "Claude Sonnet 4.5", paused: false, autonomy: 82, runs: 148, successRate: 96, tokensToday: 184320, currentTaskId: "t_02" },
-  { id: "ai_pixel", name: "PIXEL", nickname: "Pixel", role: "AI Creative Designer", kind: "ai", initials: "PX", color: "#FF7BA9", email: "pixel@ai.iplaydigital.co", state: "working", skills: ["Key visual", "Social", "Resize"], model: "Flux 1.1 Pro", paused: false, autonomy: 74, runs: 96, successRate: 91, tokensToday: 96240, currentTaskId: "t_09" },
-  { id: "ai_byte", name: "BYTE", nickname: "Byte", role: "AI Full-stack Engineer", kind: "ai", initials: "BY", color: "#35E0A1", email: "byte@ai.iplaydigital.co", state: "working", skills: ["Next.js", "SQL", "Refactor"], model: "Claude Code", paused: false, autonomy: 68, runs: 212, successRate: 93, tokensToday: 421180, currentTaskId: "t_05" },
-  { id: "ai_echo", name: "ECHO", nickname: "Echo", role: "AI Comms & QA", kind: "ai", initials: "EC", color: "#4CC3FF", email: "echo@ai.iplaydigital.co", state: "online", skills: ["QA", "Reply", "Translate"], model: "Gemini 2.5 Pro", paused: false, autonomy: 61, runs: 74, successRate: 88, tokensToday: 58120, currentTaskId: "t_17" },
-  { id: "ai_orbit", name: "ORBIT", nickname: "Orbit", role: "AI Data Analyst", kind: "ai", initials: "OR", color: "#FFC24D", email: "orbit@ai.iplaydigital.co", state: "away", skills: ["Dashboard", "Forecast"], model: "Grok 4 Fast", paused: true, autonomy: 55, runs: 38, successRate: 84, tokensToday: 12400, currentTaskId: null },
+  { id: "ai_nova", name: "NOVA", nickname: "Nova", role: "AI Project Coordinator", kind: "ai", initials: "NV", color: "#6C5CE7", email: "nova@ai.iplaydigital.co", state: "working", skills: ["Planning", "Follow-up", "Summarize"], model: "Claude Sonnet 4.5", paused: false, autonomy: 82, runs: 148, successRate: 96, tokensToday: 184320, currentTaskId: "t_02" },
+  { id: "ai_pixel", name: "PIXEL", nickname: "Pixel", role: "AI Creative Designer", kind: "ai", initials: "PX", color: "#FF6B9D", email: "pixel@ai.iplaydigital.co", state: "working", skills: ["Key visual", "Social", "Resize"], model: "Flux 1.1 Pro", paused: false, autonomy: 74, runs: 96, successRate: 91, tokensToday: 96240, currentTaskId: "t_09" },
+  { id: "ai_byte", name: "BYTE", nickname: "Byte", role: "AI Full-stack Engineer", kind: "ai", initials: "BY", color: "#22C793", email: "byte@ai.iplaydigital.co", state: "working", skills: ["Next.js", "SQL", "Refactor"], model: "Claude Code", paused: false, autonomy: 68, runs: 212, successRate: 93, tokensToday: 421180, currentTaskId: "t_05" },
+  { id: "ai_echo", name: "ECHO", nickname: "Echo", role: "AI Comms & QA", kind: "ai", initials: "EC", color: "#3BA7FF", email: "echo@ai.iplaydigital.co", state: "online", skills: ["QA", "Reply", "Translate"], model: "Gemini 2.5 Pro", paused: false, autonomy: 61, runs: 74, successRate: 88, tokensToday: 58120, currentTaskId: "t_17" },
+  { id: "ai_orbit", name: "ORBIT", nickname: "Orbit", role: "AI Data Analyst", kind: "ai", initials: "OR", color: "#D98A00", email: "orbit@ai.iplaydigital.co", state: "away", skills: ["Dashboard", "Forecast"], model: "Grok 4 Fast", paused: true, autonomy: 55, runs: 38, successRate: 84, tokensToday: 12400, currentTaskId: null },
 ];
 
 export const PROJECTS: Project[] = [
-  { id: "p_erp", code: "ERP", name: "iPlay Workspace ERP", client: "iPlay Digital", color: "#8B7CFF", grad: "linear-gradient(135deg,#7C6BFF,#4C2FD6)", progress: 62, start: D(-45), due: D(18), budget: 780000, spent: 402000, status: "doing", members: ["u_me", "u_ploy", "u_kan", "u_beer", "ai_nova", "ai_byte"] },
-  { id: "p_playwall", code: "PLW", name: "Playwall Park Silom LED", client: "Park Silom", color: "#4CC3FF", grad: "linear-gradient(135deg,#3BA7FF,#1D5BD6)", progress: 78, start: D(-70), due: D(6), budget: 1250000, spent: 910000, status: "review", members: ["u_me", "u_nan", "u_joe", "u_beer", "ai_pixel"] },
-  { id: "p_crm", code: "CRM", name: "PlayCRM Loyalty Platform", client: "Siam Retail Group", color: "#35E0A1", grad: "linear-gradient(135deg,#22C793,#0E8A63)", progress: 44, start: D(-28), due: D(32), budget: 2400000, spent: 980000, status: "doing", members: ["u_ploy", "u_kan", "u_beer", "ai_byte", "ai_orbit"] },
-  { id: "p_web", code: "WEB", name: "iPlay Digital Website 2026", client: "iPlay Digital", color: "#FF7BA9", grad: "linear-gradient(135deg,#FF6B9D,#B950F0)", progress: 88, start: D(-60), due: D(3), budget: 380000, spent: 301000, status: "review", members: ["u_nan", "u_mint", "ai_pixel", "ai_echo"] },
-  { id: "p_film", code: "MV", name: "Brand Film — Mekong Coffee", client: "Mekong Coffee", color: "#FFC24D", grad: "linear-gradient(135deg,#FFB020,#E07A1F)", progress: 30, start: D(-12), due: D(26), budget: 640000, spent: 180000, status: "planning", members: ["u_joe", "u_mint", "u_nan"] },
+  { id: "p_erp", code: "ERP", name: "iPlay Workspace ERP", client: "iPlay Digital", color: "#6C5CE7", grad: "linear-gradient(135deg,#8E7CF3,#4C2FD6)", progress: 62, start: D(-45), due: D(18), budget: 780000, spent: 402000, status: "doing", members: ["u_me", "u_ploy", "u_kan", "u_beer", "ai_nova", "ai_byte"] },
+  { id: "p_playwall", code: "PLW", name: "Playwall Park Silom LED", client: "Park Silom", color: "#3BA7FF", grad: "linear-gradient(135deg,#3BA7FF,#1D5BD6)", progress: 78, start: D(-70), due: D(6), budget: 1250000, spent: 910000, status: "review", members: ["u_me", "u_nan", "u_joe", "u_beer", "ai_pixel"] },
+  { id: "p_crm", code: "CRM", name: "PlayCRM Loyalty Platform", client: "Siam Retail Group", color: "#22C793", grad: "linear-gradient(135deg,#22C793,#0E8A63)", progress: 44, start: D(-28), due: D(32), budget: 2400000, spent: 980000, status: "doing", members: ["u_ploy", "u_kan", "u_beer", "ai_byte", "ai_orbit"] },
+  { id: "p_web", code: "WEB", name: "iPlay Digital Website 2026", client: "iPlay Digital", color: "#FF6B9D", grad: "linear-gradient(135deg,#FF6B9D,#B950F0)", progress: 88, start: D(-60), due: D(3), budget: 380000, spent: 301000, status: "review", members: ["u_nan", "u_mint", "ai_pixel", "ai_echo"] },
+  { id: "p_film", code: "MV", name: "Brand Film — Mekong Coffee", client: "Mekong Coffee", color: "#D98A00", grad: "linear-gradient(135deg,#FFB020,#E07A1F)", progress: 30, start: D(-12), due: D(26), budget: 640000, spent: 180000, status: "planning", members: ["u_joe", "u_mint", "u_nan"] },
 ];
 
 const T = (
@@ -203,10 +203,10 @@ export const MESSAGES: Message[] = [
 ];
 
 export const ROOMS: Room[] = [
-  { id: "r_silom", name: "Silom Studio", floor: "ชั้น 12", capacity: 8, color: "#8B7CFF", amenities: ["จอ 65\"", "ไวท์บอร์ด", "Zoom"], screen: true },
-  { id: "r_play", name: "Play Room (LED)", floor: "ชั้น 12", capacity: 20, color: "#4CC3FF", amenities: ["LED 4K", "ลำโพง", "กล้อง"], screen: true },
-  { id: "r_ploen", name: "Ploenchit", floor: "ชั้น 11", capacity: 4, color: "#35E0A1", amenities: ["จอ 43\"", "โทรศัพท์"] },
-  { id: "r_focus", name: "Focus Pod", floor: "ชั้น 11", capacity: 2, color: "#FFC24D", amenities: ["เงียบ", "Standing desk"] },
+  { id: "r_silom", name: "Silom Studio", floor: "ชั้น 12", capacity: 8, color: "#6C5CE7", amenities: ["จอ 65\"", "ไวท์บอร์ด", "Zoom"], screen: true },
+  { id: "r_play", name: "Play Room (LED)", floor: "ชั้น 12", capacity: 20, color: "#3BA7FF", amenities: ["LED 4K", "ลำโพง", "กล้อง"], screen: true },
+  { id: "r_ploen", name: "Ploenchit", floor: "ชั้น 11", capacity: 4, color: "#22C793", amenities: ["จอ 43\"", "โทรศัพท์"] },
+  { id: "r_focus", name: "Focus Pod", floor: "ชั้น 11", capacity: 2, color: "#D98A00", amenities: ["เงียบ", "Standing desk"] },
 ];
 
 export const BOOKINGS: Booking[] = [

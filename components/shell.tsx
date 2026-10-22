@@ -143,7 +143,7 @@ export function Shell() {
               onClick={() => go("settings")}
               title={data?.storage === "fallback" ? `${data?.dbError?.code}: ${data?.dbError?.message}` : "สถานะฐานข้อมูล"}
               style={{
-                background: data?.storage === "mariadb" ? "rgba(53,224,161,.14)" : data?.storage === "fallback" ? "rgba(255,107,138,.16)" : "rgba(255,194,77,.14)",
+                background: data?.storage === "mariadb" ? "rgba(34,199,147,.14)" : data?.storage === "fallback" ? "rgba(255,92,122,.16)" : "rgba(255,176,32,.14)",
                 color: data?.storage === "mariadb" ? "var(--mint)" : data?.storage === "fallback" ? "var(--red)" : "var(--amber)",
               }}
             >
@@ -178,7 +178,7 @@ export function Shell() {
         <div className={cls("content", (view === "calendar" || view === "chat") && "flush")}>
           {loading && <Skeleton />}
           {error && !data && (
-            <div className="card" style={{ padding: 20, borderColor: "rgba(255,107,138,.4)" }}>
+            <div className="card" style={{ padding: 20, borderColor: "rgba(255,92,122,.4)" }}>
               <b>เชื่อมต่อข้อมูลไม่ได้</b>
               <p className="tiny muted" style={{ marginTop: 4 }}>{error} — ตรวจสอบว่าเซิร์ฟเวอร์และฐานข้อมูลทำงานอยู่</p>
             </div>

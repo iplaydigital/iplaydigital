@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { useApp } from "./providers";
 import { Avatar, Empty, Modal } from "./ui";
+import { textOn } from "../lib/utils";
 import type { LeaveType } from "../lib/types";
 import { LEAVE_META, addDays, cls, d2s, pad, thaiDate, thaiShort, thaiTime, relTime } from "../lib/utils";
 
@@ -52,7 +53,7 @@ export function HrView() {
 function SumCard({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
     <div className="card" style={{ padding: 14, display: "flex", gap: 10, alignItems: "center" }}>
-      <span style={{ width: 32, height: 32, borderRadius: 10, display: "grid", placeItems: "center", background: "rgba(139,124,255,.14)", color: "var(--violet)" }}>{icon}</span>
+      <span style={{ width: 32, height: 32, borderRadius: 10, display: "grid", placeItems: "center", background: "rgba(108,92,231,.14)", color: "var(--violet)" }}>{icon}</span>
       <div><b style={{ fontSize: 16 }}>{value}</b><div className="tiny muted">{label}</div></div>
     </div>
   );
@@ -172,7 +173,7 @@ function CheckinTab() {
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div className="row" style={{ gap: 6 }}>
                     <b style={{ fontSize: 12 }}>{m?.name}</b>
-                    <span className="mode-badge" style={{ background: c.mode === "office" ? "rgba(53,224,161,.16)" : c.mode === "remote" ? "rgba(76,195,255,.16)" : "rgba(255,194,77,.16)", color: c.mode === "office" ? "var(--mint)" : c.mode === "remote" ? "var(--cyan)" : "var(--amber)" }}>
+                    <span className="mode-badge" style={{ background: c.mode === "office" ? "rgba(34,199,147,.16)" : c.mode === "remote" ? "rgba(59,167,255,.16)" : "rgba(255,176,32,.16)", color: c.mode === "office" ? "var(--mint)" : c.mode === "remote" ? "var(--cyan)" : "var(--amber)" }}>
                       {c.mode === "office" ? "ออฟฟิศ" : c.mode === "remote" ? "WFH" : "นอกสถานที่"}
                     </span>
                   </div>
@@ -209,7 +210,7 @@ function LeaveTab() {
       </div>
       <div className="grid-2" style={{ gridTemplateColumns: "1.1fr .9fr" }}>
         <div className="card">
-          <div className="card-head"><div className="card-title"><Timer size={14} /> รออนุมัติ</div><div className="right"><span className="pill" style={{ background: "rgba(255,194,77,.16)", color: "var(--amber)" }}>{pending.length} ใบ</span></div></div>
+          <div className="card-head"><div className="card-title"><Timer size={14} /> รออนุมัติ</div><div className="right"><span className="pill" style={{ background: "rgba(255,176,32,.16)", color: "var(--amber)" }}>{pending.length} ใบ</span></div></div>
           <div className="card-body" style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {pending.map((l) => {
               const m = data.members.find((x) => x.id === l.userId);
@@ -261,7 +262,7 @@ function LeaveTab() {
                     <b>{m?.nickname} · {LEAVE_META[l.type].label}</b>
                     <small>{thaiShort(l.from)} – {thaiShort(l.to)} · {l.days} วัน</small>
                   </span>
-                  <span className="pill" style={{ background: l.status === "approved" ? "rgba(53,224,161,.16)" : "rgba(255,107,138,.16)", color: l.status === "approved" ? "var(--mint)" : "var(--red)" }}>
+                  <span className="pill" style={{ background: l.status === "approved" ? "rgba(34,199,147,.16)" : "rgba(255,92,122,.16)", color: l.status === "approved" ? "var(--mint)" : "var(--red)" }}>
                     {l.status === "approved" ? "อนุมัติแล้ว" : "ปฏิเสธ"}
                   </span>
                 </div>
@@ -386,7 +387,7 @@ function RoomsTab() {
               const room = data.rooms.find((r) => r.id === b.roomId);
               return (
                 <div key={b.id} className="list-row">
-                  <span className="lr-ico" style={{ background: room?.color, borderRadius: 8 }}><DoorOpen size={12} /></span>
+                  <span className="lr-ico" style={{ background: room?.color, borderRadius: 8, color: "#fff" }}><DoorOpen size={12} /></span>
                   <span className="lr-main">
                     <b>{b.title}</b>
                     <small>{thaiShort(b.date)} · {b.start}–{b.end} · {room?.name}</small>
@@ -403,7 +404,7 @@ function RoomsTab() {
         {data.rooms.map((r) => (
           <div key={r.id} className="room-card">
             <div className="rc-top">
-              <span className="room-ico" style={{ background: r.color }}><DoorOpen size={15} /></span>
+              <span className="room-ico" style={{ background: r.color, color: textOn(r.color) }}><DoorOpen size={15} /></span>
               <div style={{ flex: 1 }}>
                 <b style={{ fontSize: 12 }}>{r.name}</b>
                 <div className="tiny muted">{r.floor} · {r.capacity} ที่นั่ง</div>
@@ -509,7 +510,7 @@ function TeamTab() {
               const d = d2s(addDays(new Date(), i - 3));
               const count = data.checkins.filter((c) => c.at.slice(0, 10) === d && c.mode === "office").length;
               return (
-                <div key={d} style={{ textAlign: "center", background: "rgba(255,255,255,.03)", borderRadius: 9, padding: "8px 4px" }}>
+                <div key={d} style={{ textAlign: "center", background: "var(--tint-1)", borderRadius: 9, padding: "8px 4px" }}>
                   <div className="tiny muted">{thaiShort(d)}</div>
                   <div style={{ fontSize: 16, fontWeight: 700, color: d === data.today ? "var(--violet)" : undefined }}>{count}</div>
                   <div className="tiny muted">คน</div>

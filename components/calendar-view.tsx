@@ -430,7 +430,7 @@ function Agenda({
           <div className="ad-date">
             <b style={{ color: g.ds === today ? "var(--violet)" : undefined }}>{s2d(g.ds).getDate()}</b>
             <small>{TH_DOW[s2d(g.ds).getDay()]} · {thaiShort(g.ds)}</small>
-            {g.ds === today && <span className="pill" style={{ background: "rgba(139,124,255,.16)", color: "var(--violet)", marginTop: 3 }}>วันนี้</span>}
+            {g.ds === today && <span className="pill" style={{ background: "rgba(108,92,231,.16)", color: "var(--violet)", marginTop: 3 }}>วันนี้</span>}
           </div>
           <div>
             {g.list.length ? g.list.map((e) => (

@@ -86,7 +86,7 @@ export function AiWorkforce() {
                 <Meter value={a.autonomy ?? 0} />
               </div>
 
-              <div className="row" style={{ gap: 8, background: "rgba(255,255,255,.03)", borderRadius: 9, padding: "7px 9px" }}>
+              <div className="row" style={{ gap: 8, background: "var(--tint-1)", borderRadius: 9, padding: "7px 9px" }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div className="tiny muted" style={{ marginBottom: 2 }}>งานในมือ</div>
                   {task ? (
