@@ -154,8 +154,10 @@ npm start            # production server
 
 | แบบ | DB_USER | DB_PASSWORD | DB_NAME |
 |---|---|---|---|
-| 1 (แนะนำ) | `iplay` | `v0Bl$62s7` | `agency_os` |
-| 2 | `agency_os` | `n_Du!8CzPuqcug58` | `agency_os` |
+| 1 (แนะนำ) | `iplay` | รหัสของทีม (เก็บใน `.env` บนเซิร์ฟเวอร์เท่านั้น) | `agency_os` |
+| 2 | `agency_os` | รหัสของทีม (อีกชุด) | `agency_os` |
+
+> รหัสผ่านจริง **ไม่ถูกเก็บใน git** — `.env.example` ใช้ placeholder และ `.env` อยู่ใน `.gitignore`
 
 ```bash
 # เขียน .env ด้วย heredoc เสมอ (รหัสมี $ และ ! ซึ่ง bash จะตีความ)
@@ -163,7 +165,7 @@ cat > .env <<'ENVEOF'
 DB_HOST=127.0.0.1
 DB_PORT=3306
 DB_USER=iplay
-DB_PASSWORD=v0Bl$62s7
+DB_PASSWORD=__รหัสผ่านของทีม__
 DB_NAME=agency_os
 NEXT_PUBLIC_LED_URL=https://playwall-parksilom.pages.dev/
 NEXT_PUBLIC_DRIVE_FOLDER=https://drive.google.com/drive/folders/1iPlayDigitalWorkspace
