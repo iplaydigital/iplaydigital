@@ -1,9 +1,12 @@
 import { NextResponse } from "next/server";
 import { getBootstrap } from "@/lib/store";
+import { requireUser } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
+  const { error } = await requireUser();
+  if (error) return error;
   try {
     const data = await getBootstrap();
     return NextResponse.json(data, {

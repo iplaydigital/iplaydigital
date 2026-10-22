@@ -2,8 +2,8 @@
 
 import React, { useMemo } from "react";
 import {
-  Bell, Bot, CalendarDays, ChevronRight, Clock, Columns3, Command, LayoutDashboard,
-  MessageSquare, MonitorPlay, Moon, Plus, Search, Settings, Sparkles, Users, Zap, Cloud,
+  Bell, Bot, CalendarDays, ChevronDown, Columns3, Command, FileBarChart2, KeyRound, LayoutDashboard,
+  LogOut, MessageSquare, MonitorPlay, Plus, Search, Settings, ShieldCheck, Sparkles, Users, UserCog, Zap, Cloud,
 } from "lucide-react";
 import { useApp, type View } from "./providers";
 import { Dashboard } from "./dashboard";
@@ -14,9 +14,10 @@ import { HrView } from "./hr-view";
 import { LedView } from "./led-view";
 import { SettingsView } from "./settings-view";
 import { ChatDock, ChatWorkspace } from "./chat-panel";
+import { ReportsView } from "./reports-view";
 import { DbBanner } from "./db-status";
 import { EventModal, GlobalSearch, NewTaskModal, TaskDrawer } from "./task-ui";
-import { Avatar } from "./ui";
+import { Avatar, Modal } from "./ui";
 import { cls, thaiFull, thaiTime } from "../lib/utils";
 
 const NAV: { group: string; items: { key: View; label: string; icon: React.ReactNode; meta?: string }[] }[] = [
@@ -28,6 +29,7 @@ const NAV: { group: string; items: { key: View; label: string; icon: React.React
       { key: "tasks", label: "งาน & Kanban", icon: <Columns3 size={16} />, meta: "tasks" },
       { key: "ai", label: "AI Workforce", icon: <Bot size={16} />, meta: "ai" },
       { key: "chat", label: "แชท & Drive", icon: <MessageSquare size={16} />, meta: "chat" },
+      { key: "reports", label: "รายงาน & Drive", icon: <FileBarChart2 size={16} /> },
       { key: "hr", label: "HR & ลงเวลา", icon: <Users size={16} /> },
     ],
   },
@@ -47,9 +49,10 @@ const TITLES: Record<View, { title: string; sub: string }> = {
   tasks: { title: "งาน & Kanban", sub: "4 สถานะ · งานย่อย · AI รับงานได้" },
   ai: { title: "AI Workforce", sub: "เอเจนต์ทำงานเหมือนคน พร้อม run log และ token" },
   chat: { title: "แชท & Google Drive", sub: "กลุ่ม · ปักหมุด · แชร์เอกสาร · AI ช่วยตอบ" },
+  reports: { title: "รายงาน & Google Drive", sub: "สร้าง/แก้ไขรายงาน · แนบไฟล์ Drive · อนุมัติ" },
   hr: { title: "HR & ลงเวลา", sub: "เช็คอินนอกสถานที่ · ลา · จองห้องประชุม" },
   led: { title: "LED Wall", sub: "เชื่อมจอ Playwall Park Silom" },
-  settings: { title: "ตั้งค่า", sub: "องค์กร · AI · ฐานข้อมูล · การเชื่อมต่อ" },
+  settings: { title: "ตั้งค่า", sub: "องค์กร · พนักงาน & สิทธิ์ · รายงาน & Drive · ฐานข้อมูล" },
 };
 
 export function Shell() {
@@ -77,9 +80,10 @@ export function Shell() {
     <div className="app">
       <aside className="sidebar">
         <div className="brand">
-          <div className="brand-mark">iP</div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/play-digital.png" alt="play digital" className="brand-logo" />
           <div className="brand-txt">
-            <b>iPlay Workspace</b>
+            <b>Workspace</b>
             <small>Digital Agency OS</small>
           </div>
         </div>
@@ -164,12 +168,7 @@ export function Shell() {
               {!!unread && <span className="badge" style={{ background: "var(--violet)", color: "#fff", fontSize: 9, padding: "0 5px", borderRadius: 20 }}>{unread}</span>}
             </button>
             <button className="btn btn-primary" onClick={() => setNewTask(true)}><Plus size={14} /> สร้างงาน</button>
-            {me && (
-              <div className="user-chip">
-                <Avatar member={me} />
-                <div className="u-meta"><b>{me.nickname}</b><small>{me.role.split(" / ")[0]}</small></div>
-              </div>
-            )}
+            <UserMenu />
           </div>
         </header>
 
@@ -190,6 +189,7 @@ export function Shell() {
               {view === "tasks" && <TasksView />}
               {view === "ai" && <AiWorkforce />}
               {view === "chat" && <ChatWorkspace />}
+              {view === "reports" && <ReportsView />}
               {view === "hr" && <HrView />}
               {view === "led" && <LedView />}
               {view === "settings" && <SettingsView />}
@@ -223,5 +223,127 @@ function Skeleton() {
         <div className="row muted" style={{ gap: 8 }}><span className="pulse" /> กำลังโหลด Workspace…</div>
       </div>
     </div>
+  );
+}
+
+
+function UserMenu() {
+  const { me, data, go } = useApp();
+  const [open, setOpen] = React.useState(false);
+  const [pwOpen, setPwOpen] = React.useState(false);
+  const ref = React.useRef<HTMLDivElement>(null);
+  const member = data?.members.find((m) => m.id === data?.meId);
+
+  React.useEffect(() => {
+    if (!open) return;
+    const onDoc = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, [open]);
+
+  if (!me) return null;
+  const manager = me.role === "admin" || me.role === "support";
+
+  const logout = async () => {
+    await fetch("/api/auth/logout", { method: "POST" });
+    window.location.href = "/login";
+  };
+
+  return (
+    <div className="user-menu" ref={ref}>
+      <button className="user-chip" onClick={() => setOpen(!open)} title={me.email}>
+        {member ? <Avatar member={member} /> : <span className="avatar" style={{ background: me.color, color: "#fff" }}>{me.initials}</span>}
+        <div className="u-meta">
+          <b>{me.nickname || me.name}</b>
+          <small>{me.role === "admin" ? "Admin" : me.role === "support" ? "Support" : "Member"}</small>
+        </div>
+        <ChevronDown size={13} />
+      </button>
+      {open && (
+        <div className="user-pop">
+          <div className="up-head">
+            <b>{me.name}</b>
+            <div className="tiny muted">{me.email}</div>
+            <span className={`role-pill ${me.role}`}>
+              <ShieldCheck size={10} /> {me.role === "admin" ? "Admin · สิทธิ์เต็ม" : me.role === "support" ? "Support" : "Member"}
+            </span>
+          </div>
+          {manager && (
+            <>
+              <button onClick={() => { setOpen(false); go("settings"); }}>
+                <Settings size={14} /> ตั้งค่าระบบ
+              </button>
+              <button onClick={() => { setOpen(false); go("settings"); }}>
+                <UserCog size={14} /> พนักงาน & สิทธิ์
+              </button>
+              <button onClick={() => { setOpen(false); go("reports"); }}>
+                <FileBarChart2 size={14} /> รายงานทีม
+              </button>
+            </>
+          )}
+          <button onClick={() => { setOpen(false); setPwOpen(true); }}>
+            <KeyRound size={14} /> เปลี่ยนรหัสผ่าน
+          </button>
+          <button className="danger" onClick={() => void logout()}>
+            <LogOut size={14} /> ออกจากระบบ
+          </button>
+        </div>
+      )}
+      {pwOpen && <PasswordModal onClose={() => setPwOpen(false)} />}
+    </div>
+  );
+}
+
+function PasswordModal({ onClose }: { onClose: () => void }) {
+  const { toast } = useApp();
+  const [current, setCurrent] = React.useState("");
+  const [next, setNext] = React.useState("");
+  const [confirm, setConfirm] = React.useState("");
+  const [busy, setBusy] = React.useState(false);
+
+  const submit = async () => {
+    if (next.length < 6) return toast("รหัสผ่านใหม่ต้องมีอย่างน้อย 6 ตัวอักษร", "err");
+    if (next !== confirm) return toast("รหัสผ่านใหม่ทั้งสองช่องไม่ตรงกัน", "err");
+    setBusy(true);
+    try {
+      const res = await fetch("/api/auth/password", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ current, next }),
+      });
+      const body = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) throw new Error(body.error || "เปลี่ยนรหัสผ่านไม่สำเร็จ");
+      toast("เปลี่ยนรหัสผ่านแล้ว", "ok");
+      onClose();
+    } catch (err) {
+      toast((err as Error).message, "err");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Modal
+      title="เปลี่ยนรหัสผ่าน"
+      subtitle="ใช้สำหรับเข้าสู่ระบบด้วยอีเมล/รหัสผ่าน"
+      icon={<KeyRound size={16} />}
+      onClose={onClose}
+      footer={
+        <>
+          <button className="btn" onClick={onClose}>ยกเลิก</button>
+          <button className="btn btn-primary" onClick={() => void submit()} disabled={busy}>
+            {busy ? "กำลังบันทึก…" : "บันทึกรหัสผ่านใหม่"}
+          </button>
+        </>
+      }
+    >
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        <label className="field"><span className="label">รหัสผ่านปัจจุบัน</span><input className="input" type="password" value={current} onChange={(e) => setCurrent(e.target.value)} placeholder="ถ้าเข้าด้วย Google/LINE เว้นว่างได้" /></label>
+        <label className="field"><span className="label">รหัสผ่านใหม่</span><input className="input" type="password" value={next} onChange={(e) => setNext(e.target.value)} /></label>
+        <label className="field"><span className="label">ยืนยันรหัสผ่านใหม่</span><input className="input" type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} /></label>
+      </div>
+    </Modal>
   );
 }

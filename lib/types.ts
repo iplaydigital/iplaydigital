@@ -209,6 +209,55 @@ export interface AiRun {
   status: "running" | "success" | "queued" | "failed";
 }
 
+// ── ผู้ใช้ระบบ & สิทธิ์ ─────────────────────────────────────
+export type UserRole = "admin" | "support" | "member";
+export type AuthProvider = "password" | "google" | "line";
+
+/** ข้อมูลผู้ใช้ที่ส่งไปฝั่ง client (ไม่มีรหัสผ่าน) */
+export interface SessionUser {
+  id: ID;
+  email: string;
+  name: string;
+  nickname: string;
+  role: UserRole;
+  provider: AuthProvider;
+  color: string;
+  initials: string;
+  position?: string;
+  active: boolean;
+  createdAt: string;
+  lastLoginAt?: string | null;
+  memberId?: ID | null;
+}
+
+// ── รายงาน (เชื่อม Google Drive) ────────────────────────────
+export type ReportStatus = "draft" | "submitted" | "approved";
+
+export interface ReportAttachment {
+  id: ID;
+  name: string;
+  url: string;
+  /** ชื่อไฟล์บน Google Drive ถ้าอัปโหลดผ่านระบบ */
+  driveId?: string;
+  size?: string;
+  mime?: string;
+}
+
+export interface Report {
+  id: ID;
+  code: string;
+  title: string;
+  period: string; // YYYY-MM
+  projectId?: ID | null;
+  authorId: ID;
+  status: ReportStatus;
+  summary: string;
+  driveUrl?: string;
+  attachments: ReportAttachment[];
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Settings {
   brand: string;
   branch: string;
@@ -234,6 +283,7 @@ export interface Bootstrap {
   leaves: LeaveRequest[];
   checkins: CheckIn[];
   aiRuns: AiRun[];
+  reports: Report[];
   activity: ActivityItem[];
   settings: Settings;
   meId: ID;

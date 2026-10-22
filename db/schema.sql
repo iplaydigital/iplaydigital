@@ -228,3 +228,41 @@ CREATE TABLE IF NOT EXISTS ws_settings (
   data       JSON NOT NULL,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ═══════════════════════════════════════════════════════════════
+--  ผู้ใช้ระบบ + รายงาน (สร้างอัตโนมัติเมื่อใช้งานครั้งแรกเช่นกัน)
+-- ═══════════════════════════════════════════════════════════════
+CREATE TABLE IF NOT EXISTS ws_users (
+  id            VARCHAR(32) PRIMARY KEY,
+  email         VARCHAR(190) NOT NULL UNIQUE,
+  name          VARCHAR(160) NOT NULL,
+  nickname      VARCHAR(80)  NOT NULL DEFAULT '',
+  role          ENUM('admin','support','member') NOT NULL DEFAULT 'member',
+  provider      ENUM('password','google','line') NOT NULL DEFAULT 'password',
+  password_hash VARCHAR(255) NULL,
+  color         VARCHAR(16)  NOT NULL DEFAULT '#7100DD',
+  initials      VARCHAR(6)   NOT NULL DEFAULT '',
+  active        TINYINT(1)   NOT NULL DEFAULT 1,
+  position      VARCHAR(120) NOT NULL DEFAULT '',
+  member_id     VARCHAR(32)  NULL,
+  created_at    VARCHAR(32)  NOT NULL,
+  last_login_at VARCHAR(32)  NULL,
+  KEY idx_ws_users_role (role)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS ws_reports (
+  id          VARCHAR(32) PRIMARY KEY,
+  code        VARCHAR(24) NOT NULL,
+  title       VARCHAR(300) NOT NULL,
+  period      VARCHAR(7) NOT NULL,
+  project_id  VARCHAR(32) NULL,
+  author_id   VARCHAR(32) NOT NULL,
+  status      ENUM('draft','submitted','approved') NOT NULL DEFAULT 'draft',
+  summary     TEXT NULL,
+  drive_url   TEXT NULL,
+  attachments JSON NULL,
+  created_at  VARCHAR(32) NOT NULL,
+  updated_at  VARCHAR(32) NOT NULL,
+  KEY idx_ws_reports_status (status),
+  KEY idx_ws_reports_author (author_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
