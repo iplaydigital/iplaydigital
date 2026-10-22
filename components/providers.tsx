@@ -60,13 +60,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [now, setNow] = useState(new Date());
   const [aiBusy, setAiBusy] = useState<string | null>(null);
   const toastSeq = useRef(1);
+  const fallbackNotified = useRef(false);
 
   const refresh = useCallback(async () => {
     try {
-      const res = await fetch("/api/bootstrap", { cache: "no-store" });
-      if (!res.ok) throw new Error(`bootstrap failed (${res.status})`);
-      setData((await res.json()) as Bootstrap);
+      const res = await fetch(`/api/bootstrap?t=${Date.now()}`, { cache: "no-store" });
+      if (!res.ok) {
+        const body = (await res.json().catch(() => ({}))) as { error?: string; hint?: string };
+        throw new Error(body.error ?? `bootstrap failed (${res.status})${body.hint ? ` — ${body.hint}` : ""}`);
+      }
+      const next = (await res.json()) as Bootstrap;
+      setData(next);
       setError(null);
+      if (next.storage === "fallback" && !fallbackNotified.current) {
+        fallbackNotified.current = true;
+        toast(`ฐานข้อมูลไม่พร้อม (${next.dbError?.code ?? "db"}) — ใช้ข้อมูลสำรองชั่วคราว กดที่ป้ายสถานะเพื่อดูวิธีแก้`, "err");
+      }
     } catch (e) {
       setError((e as Error).message);
     } finally {

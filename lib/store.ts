@@ -3,11 +3,21 @@ import path from "path";
 import type { Action, Bootstrap, Message, ActivityItem, CalendarEvent, Task } from "./types";
 import { seedData, trendData } from "./seed";
 import { uid, STATUS_ORDER, CAT_META, pad } from "./utils";
+import { describeDbError } from "./db-diag";
 
 export type StoreData = Omit<Bootstrap, "trend" | "storage" | "today">;
 
 const FILE = path.join(process.cwd(), ".data", "store.json");
-const g = globalThis as unknown as { __iplayStore?: StoreData };
+const g = globalThis as unknown as {
+  __iplayStore?: StoreData;
+  __dbErr?: import("./db-diag").DbErrorInfo | null;
+};
+
+const todayISO = () => new Date().toISOString().slice(0, 10);
+
+export function getDbError() {
+  return g.__dbErr ?? null;
+}
 
 function ensureDirs() {
   const dir = path.dirname(FILE);
@@ -354,26 +364,52 @@ export function getDemoBootstrap(): Bootstrap {
   const data = loadStore();
   return {
     ...data,
-    today: new Date().toISOString().slice(0, 10),
+    today: todayISO(),
     storage: "demo",
+    dbError: null,
     trend: trendData(),
   };
 }
 
 export async function getBootstrap(): Promise<Bootstrap> {
   if (process.env.DB_HOST) {
-    const { fetchAll } = await import("./db-maria");
-    const data = await fetchAll();
-    return { ...data, today: new Date().toISOString().slice(0, 10), storage: "mariadb", trend: trendData() };
+    try {
+      const { fetchAll } = await import("./db-maria");
+      const data = await fetchAll();
+      g.__dbErr = null;
+      return { ...data, today: todayISO(), storage: "mariadb", dbError: null, trend: trendData() };
+    } catch (err) {
+      const info = describeDbError(err);
+      g.__dbErr = info;
+      console.error(`[db] ใช้ข้อมูลสำรอง — ${info.code}: ${info.message}`);
+      const demo = getDemoBootstrap();
+      if (process.env.DB_REQUIRED === "1") {
+        throw Object.assign(new Error(info.message), { dbError: info });
+      }
+      return { ...demo, storage: "fallback", dbError: info };
+    }
   }
   return getDemoBootstrap();
 }
 
+/** mutation: ถ้า DB ล่มและไม่ได้บังคับ DB_REQUIRED จะเขียนลง store สำรองเพื่อให้งานไม่หาย */
 export async function applyAction(action: Action): Promise<void> {
   if (process.env.DB_HOST) {
-    const { applyMaria } = await import("./db-maria");
-    await applyMaria(action);
-    return;
+    try {
+      const { applyMaria } = await import("./db-maria");
+      await applyMaria(action);
+      g.__dbErr = null;
+      return;
+    } catch (err) {
+      const info = describeDbError(err);
+      g.__dbErr = info;
+      console.error(`[db] เขียนไม่สำเร็จ ใช้โหมดสำรอง — ${info.code}: ${info.message}`);
+      if (process.env.DB_REQUIRED === "1") {
+        throw Object.assign(new Error(info.message), { dbError: info });
+      }
+      applyDemoAction(action);
+      return;
+    }
   }
   applyDemoAction(action);
 }

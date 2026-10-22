@@ -170,6 +170,24 @@ h1, h2, h3, h4, p { margin: 0; }
 .page { display: flex; flex-direction: column; gap: 18px; animation: fade 0.35s ease; }
 @keyframes fade { from { opacity: 0; transform: translateY(6px); } }
 
+/* ── db status ─────────────────────────────────────────────── */
+.db-banner {
+  display: flex; align-items: center; gap: 10px; padding: 9px 16px;
+  background: linear-gradient(90deg, rgba(255,107,138,.16), rgba(255,194,77,.09));
+  border-bottom: 1px solid rgba(255,107,138,.3); color: var(--text);
+  flex: 0 0 auto; z-index: 15;
+}
+.db-banner > svg { color: var(--red); flex: 0 0 auto; }
+.db-banner b { display: block; font-size: 12px; }
+.db-banner small { font-size: 10.5px; color: var(--text-2); display: block; line-height: 1.45; }
+.spin { animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.code-chip {
+  font-family: ui-monospace, monospace; font-size: 10px; padding: 2px 7px; border-radius: 6px;
+  background: rgba(255,255,255,.06); border: 1px solid var(--stroke); color: var(--text-2);
+}
+.storage-chip { display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border-radius: 20px; font-size: 10px; font-weight: 700; }
+
 /* ── primitives ────────────────────────────────────────────── */
 .card {
   background: linear-gradient(180deg, rgba(24, 28, 44, 0.86), rgba(15, 18, 30, 0.92));

@@ -11,6 +11,16 @@ import { uid, pad } from "./utils";
 
 export const dbEnabled = () => Boolean(process.env.DB_HOST);
 
+/** ข้อมูลประกอบการวินิจฉัย (ไม่รวมรหัสผ่าน) */
+export function dbTarget() {
+  return {
+    host: process.env.DB_HOST || "—",
+    port: Number(process.env.DB_PORT || 3306),
+    user: process.env.DB_USER || "—",
+    database: process.env.DB_NAME || "—",
+  };
+}
+
 interface Row extends mysql.RowDataPacket {
   [key: string]: any;
 }
@@ -26,6 +36,7 @@ export function pool() {
       database: process.env.DB_NAME,
       waitForConnections: true,
       connectionLimit: 10,
+      connectTimeout: 8000,
       dateStrings: true,
       charset: "utf8mb4",
       timezone: "+07:00",

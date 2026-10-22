@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { useApp } from "./providers";
 import { Modal } from "./ui";
+import { DbDiagnostics } from "./db-status";
 import { thaiDate } from "../lib/utils";
 
 export function SettingsView() {
@@ -71,6 +72,8 @@ export function SettingsView() {
 
   return (
     <div className="page">
+      <DbDiagnostics />
+
       <div className="grid-2">
         <div className="card">
           <div className="card-head"><div className="card-title"><Building2 size={14} /> ข้อมูลองค์กร</div></div>
