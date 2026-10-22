@@ -1,5 +1,6 @@
 # iPlay Workspace — Digital Agency OS
 
+
 ระบบบริหารงานสไตล์ ERP สำหรับ **iPlay Digital** — ปฏิทินเต็มจอ, Kanban, **ทีมงาน AI ที่ทำงานเหมือนคน**, แชททีม + Google Drive, HR (เช็คอิน/ลา/จองห้อง) และเชื่อมจอ LED **Playwall Park Silom**
 
 สร้างด้วย **Next.js 15 (App Router) + TypeScript + Tailwind v4** และ **MariaDB** เป็นฐานข้อมูลหลัก
