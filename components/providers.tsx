@@ -1,9 +1,10 @@
 "use client";
 
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
-import type { Action, Bootstrap, CalendarEvent, Task } from "../lib/types";
+import type { Action, Bootstrap, CalendarEvent, SessionUser, Task } from "../lib/types";
 
-export type View = "dashboard" | "calendar" | "tasks" | "ai" | "chat" | "hr" | "led" | "settings";
+export const VIEWS = ["dashboard", "calendar", "tasks", "ai", "chat", "reports", "hr", "led", "settings"] as const;
+export type View = (typeof VIEWS)[number];
 type Toast = { id: number; text: string; kind: "ok" | "err" | "ai" | "info" };
 
 export interface EventFormState {
@@ -14,6 +15,7 @@ export interface EventFormState {
 }
 
 interface Ctx {
+  me: SessionUser | null;
   data: Bootstrap | null;
   loading: boolean;
   error: string | null;
@@ -46,7 +48,30 @@ export function useApp() {
   return ctx;
 }
 
-export function AppProvider({ children }: { children: React.ReactNode }) {
+
+/** ผูก session ผู้ใช้จริง (อีเมล) เข้ากับ member ใน Workspace */
+function attachMe(next: Bootstrap, me: SessionUser | null): Bootstrap {
+  if (!me?.email) return next;
+  const lower = me.email.toLowerCase();
+  const match = next.members.find((m) => m.email.toLowerCase() === lower);
+  if (match) return { ...next, meId: match.id };
+  const id = `u_${me.id.replace(/^usr_/, "")}`;
+  return {
+    ...next,
+    meId: id,
+    members: [
+      ...next.members,
+      {
+        id, name: me.name, nickname: me.nickname || me.name.split(" ")[0],
+        role: me.position || "ทีม play digital", kind: "human",
+        initials: me.initials, color: me.color, email: me.email, state: "online",
+        skills: [], load: 0, capacity: 40,
+      },
+    ],
+  };
+}
+
+export function AppProvider({ children, me = null }: { children: React.ReactNode; me?: SessionUser | null }) {
   const [data, setData] = useState<Bootstrap | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -69,7 +94,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const body = (await res.json().catch(() => ({}))) as { error?: string; hint?: string };
         throw new Error(body.error ?? `bootstrap failed (${res.status})${body.hint ? ` — ${body.hint}` : ""}`);
       }
-      const next = (await res.json()) as Bootstrap;
+      const next = attachMe((await res.json()) as Bootstrap, me);
       setData(next);
       setError(null);
       if (next.storage === "fallback" && !fallbackNotified.current) {
@@ -81,7 +106,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [me]);
 
   useEffect(() => {
     void refresh();
@@ -120,13 +145,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         body: JSON.stringify(action),
       });
       if (!res.ok) throw new Error(`action failed (${res.status})`);
-      const next = (await res.json()) as Bootstrap;
-      setData(next);
+      setData(attachMe((await res.json()) as Bootstrap, me));
     } catch (e) {
       toast(`บันทึกไม่สำเร็จ: ${(e as Error).message}`, "err");
       void refresh();
     }
-  }, [refresh]);
+  }, [refresh, me]);
 
   const toast = useCallback((text: string, kind: Toast["kind"] = "ok") => {
     const id = toastSeq.current++;
@@ -141,8 +165,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const hash = (typeof window !== "undefined" ? window.location.hash.replace("#", "") : "") as View;
-    const valid: View[] = ["dashboard", "calendar", "tasks", "ai", "chat", "hr", "led", "settings"];
-    if (valid.includes(hash)) setView(hash);
+    if ((VIEWS as readonly string[]).includes(hash)) setView(hash);
   }, []);
 
   useEffect(() => {
@@ -167,13 +190,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const value = useMemo<Ctx>(
     () => ({
-      data, loading, error, act, refresh, view, go,
+      me, data, loading, error, act, refresh, view, go,
       taskId, openTask, closeTask,
       eventForm, openEvent, closeEvent,
       toast, activeChannel, setActiveChannel, dockOpen, setDockOpen,
       search, setSearch, now, aiBusy,
     }),
-    [data, loading, error, act, refresh, view, go, taskId, openTask, closeTask, eventForm, openEvent, closeEvent, toast, activeChannel, dockOpen, search, now, aiBusy],
+    [me, data, loading, error, act, refresh, view, go, taskId, openTask, closeTask, eventForm, openEvent, closeEvent, toast, activeChannel, dockOpen, search, now, aiBusy],
   );
 
   return (

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getBootstrap } from "../../../lib/store";
 import { aiReply } from "../../../lib/ai";
+import { requireUser } from "../../../lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -10,6 +11,8 @@ export const dynamic = "force-dynamic";
  * - ถ้าตั้ง AI_GATEWAY_URL + AI_GATEWAY_KEY จะส่ง context ไปยัง LLM gateway ก่อน
  */
 export async function POST(req: Request) {
+  const { error } = await requireUser();
+  if (error) return error;
   try {
     const { text, agentId } = (await req.json()) as { text: string; agentId?: string };
     const data = await getBootstrap();

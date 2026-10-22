@@ -263,7 +263,7 @@ export const ACTIVITY: ActivityItem[] = [
   { id: "a_11", at: iso(160), actorId: "ai_echo", text: "ตรวจข้อความภาษาไทย 42 จุด", kind: "ai" },
 ];
 
-export function seedData(): Omit<Bootstrap, "trend" | "storage" | "today"> {
+export function seedData(): Omit<Bootstrap, "trend" | "storage" | "today" | "reports"> {
   return {
     members: TEAM,
     projects: PROJECTS,
