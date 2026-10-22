@@ -14,6 +14,7 @@ import { HrView } from "./hr-view";
 import { LedView } from "./led-view";
 import { SettingsView } from "./settings-view";
 import { ChatDock, ChatWorkspace } from "./chat-panel";
+import { DbBanner } from "./db-status";
 import { EventModal, GlobalSearch, NewTaskModal, TaskDrawer } from "./task-ui";
 import { Avatar } from "./ui";
 import { cls, thaiFull, thaiTime } from "../lib/utils";
@@ -137,9 +138,21 @@ export function Shell() {
             <kbd><Command size={9} /> K</kbd>
           </div>
           <div className="topbar-right">
+            <button
+              className="storage-chip"
+              onClick={() => go("settings")}
+              title={data?.storage === "fallback" ? `${data?.dbError?.code}: ${data?.dbError?.message}` : "สถานะฐานข้อมูล"}
+              style={{
+                background: data?.storage === "mariadb" ? "rgba(53,224,161,.14)" : data?.storage === "fallback" ? "rgba(255,107,138,.16)" : "rgba(255,194,77,.14)",
+                color: data?.storage === "mariadb" ? "var(--mint)" : data?.storage === "fallback" ? "var(--red)" : "var(--amber)",
+              }}
+            >
+              <span style={{ width: 6, height: 6, borderRadius: 9, background: "currentColor" }} />
+              {data?.storage === "mariadb" ? "MariaDB" : data?.storage === "fallback" ? "ข้อมูลสำรอง" : "Demo"}
+            </button>
             <div className="today-chip">
               <b>{mounted ? thaiFull(now) : "—"}</b>
-              <small>{mounted ? `เวลา ${thaiTime(now.toISOString())}` : ""} · {data?.storage === "mariadb" ? "MariaDB" : "Demo mode"}</small>
+              <small>{mounted ? `เวลา ${thaiTime(now.toISOString())}` : ""}</small>
             </div>
             <button className="icon-btn tb-bell" title="แจ้งเตือน">
               <Bell size={15} />
@@ -159,6 +172,8 @@ export function Shell() {
             )}
           </div>
         </header>
+
+        <DbBanner />
 
         <div className={cls("content", (view === "calendar" || view === "chat") && "flush")}>
           {loading && <Skeleton />}

@@ -128,13 +128,60 @@ npm start            # production server
 ### Environment variables
 | ตัวแปร | จำเป็น | คำอธิบาย |
 |---|---|---|
-| `DB_HOST` / `DB_PORT` | ใช้ MariaDB | ที่อยู่ฐานข้อมูล (ถ้าไม่ตั้ง = demo store) |
+| `DB_HOST` / `DB_PORT` | ใช้ MariaDB | ที่อยู่ฐานข้อมูล (ถ้าไม่ตั้ง = demo store) — ใช้ `127.0.0.1` เมื่อเว็บกับ DB เครื่องเดียวกัน |
+| `DB_REQUIRED` | ไม่ | `1` = ห้าม fallback (คืน 503 พร้อมสาเหตุ แทนการสลับไปข้อมูลสำรอง) |
 | `DB_USER` / `DB_PASSWORD` / `DB_NAME` | ใช้ MariaDB | ข้อมูลเชื่อมต่อ + ชื่อฐานข้อมูล |
 | `NEXT_PUBLIC_LED_URL` | ไม่ | URL จอ LED (ค่าเริ่มต้น `https://playwall-parksilom.pages.dev/`) |
 | `NEXT_PUBLIC_DRIVE_FOLDER` | ไม่ | โฟลเดอร์กลาง Google Drive ของทีม |
 | `GOOGLE_MCP_URL` | ไม่ | MCP server ของ Google Drive (เช่น `http://localhost:8787`) |
 | `AI_GATEWAY_URL` / `AI_GATEWAY_KEY` | ไม่ | LLM gateway (ถ้าไม่ตั้งใช้ engine ในตัว) |
 | `AI_MODEL` | ไม่ | ชื่อโมเดลเริ่มต้นของ gateway |
+
+---
+
+## 🩺 แก้ปัญหาการเชื่อมต่อฐานข้อมูล
+
+ระบบออกแบบให้ **ไม่ล่มทั้งเว็บ** เมื่อ DB มีปัญหา:
+
+| สถานะ | พฤติกรรม |
+|---|---|
+| `mariadb` | ต่อฐานข้อมูลได้ — บันทึกทุกอย่างลง MariaDB |
+| `demo` | ยังไม่ได้ตั้ง `DB_HOST` — ใช้ `.data/store.json` |
+| `fallback` | ตั้งค่าแล้วแต่ **ต่อไม่ได้** — แสดงข้อมูลสำรอง + **แบนเนอร์เตือน** พร้อมรหัสข้อผิดพลาดและปุ่ม "ตรวจสอบอีกครั้ง" (ถ้าตั้ง `DB_REQUIRED=1` จะคืน 503 แทน) |
+
+**ขั้นตอนวินิจฉัย (บนเซิร์ฟเวอร์):**
+```bash
+cd /path/to/iplaydigital
+
+# 1) ตรวจทีละขั้น: env → TCP → login → สิทธิ์ → schema (มีคำแนะนำภาษาไทย)
+npm run db:doctor
+
+# 2) สร้าง schema + seed ถ้ายังว่าง
+npm run db:doctor -- --init
+
+# 3) ดูสถานะจาก API (ไม่ต้องเปิดเบราว์เซอร์)
+curl -s https://i.playdigital.co.th/api/health | jq '.db'
+
+# 4) แก้ .env แล้ว restart เสมอ (ค่า env อ่านตอนบูต)
+pm2 restart <name> --update-env     # หรือ systemctl restart <service>
+```
+
+หน้า **ตั้งค่า → วินิจฉัยฐานข้อมูล** แสดง host/user/database/เวลาเชื่อมต่อ/จำนวนตาราง `ws_*` และ
+คำสั่งที่ใช้แก้ (คัดลอกได้) โดยไม่เปิดเผยรหัสผ่าน
+
+**สาเหตุที่พบบ่อย**
+
+| อาการ | สาเหตุ / วิธีแก้ |
+|---|---|
+| `ER_ACCESS_DENIED_ERROR (1045)` | user/รหัสไม่ตรง หรือ user ถูกสร้างเป็น `unix_socket` → `ALTER USER … IDENTIFIED VIA mysql_native_password USING PASSWORD('…')` |
+| `ER_BAD_DB_ERROR (1049)` | ยังไม่สร้าง database → `CREATE DATABASE … CHARACTER SET utf8mb4` |
+| `ER_DBACCESS_DENIED_ERROR (1044)` | ไม่มีสิทธิ์บน DB → `GRANT ALL PRIVILEGES ON db.* TO user@host` |
+| `ECONNREFUSED` | MariaDB ไม่รัน / พอร์ตผิด → `systemctl status mariadb` |
+| `PROTOCOL_CONNECTION_LOST` | ไฟร์วอลล์ตัด → ถ้าเครื่องเดียวกันใช้ `DB_HOST=127.0.0.1` |
+| ต่อได้แต่ค่าไม่เปลี่ยนหลังแก้ `.env` | ยังไม่ restart แอป (PM2 ต้องใช้ `--update-env`) |
+
+> ⚠️ รหัสผ่านที่มี `! $ # " '` หรือช่องว่าง: เขียน `.env` ด้วย heredoc `cat > .env <<'ENVEOF' … ENVEOF`
+> เพราะ `#` ที่ไม่ใส่ quote จะถูกตัดเป็นคอมเมนต์ และ `$` จะถูกตีความเป็นตัวแปร
 
 ---
 
@@ -177,7 +224,7 @@ npm start            # production server
 | POST | `/api/ai` | AI agent ตอบโดยอ่านข้อมูลจริง (หรือ proxy ไป gateway) |
 | GET | `/api/drive` | รายการไฟล์ Drive (ผ่าน MCP ถ้าตั้งค่า) |
 | GET | `/api/led` | payload สำหรับจอ LED (CORS `*`) |
-| GET | `/api/health` | health check + storage mode |
+| GET | `/api/health` | **ping MariaDB จริง** — คืน host/user/database/latency/จำนวนตาราง และสาเหตุ+วิธีแก้เมื่อ fail |
 
 `Action` ที่รองรับ: `task.move/update/create/delete/comment/subtask`, `event.move/create/update/delete`,
 `chat.send/pin/react/channel/read`, `agent.toggle/run`, `hr.checkin/leave/leave.decide/booking/booking.cancel`,
@@ -252,8 +299,10 @@ iplaydigital/
 │   ├── ai.ts                   # context engine ของ AI agents
 │   └── utils.ts                # วันที่ไทย/พ.ศ., สี, สถานะ
 ├── db/schema.sql               # MariaDB schema (ws_*)
+├── lib/db-diag.ts              # แปลง error DB เป็นคำแนะนำ + ping จริง
 ├── scripts/db-init.ts          # npm run db:init
 ├── scripts/db-seed.ts          # npm run db:seed
+├── scripts/db-doctor.ts        # npm run db:doctor (ตรวจ env → TCP → login → schema)
 ├── docker-compose.yml          # MariaDB 11 + utf8mb4
 └── .env.example
 ```

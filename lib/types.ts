@@ -238,7 +238,9 @@ export interface Bootstrap {
   settings: Settings;
   meId: ID;
   today: string;
-  storage: "mariadb" | "demo";
+  /** mariadb = ต่อฐานข้อมูลได้ · demo = ยังไม่ตั้งค่า DB · fallback = ตั้งค่าแล้วแต่ต่อไม่ได้ (ใช้ข้อมูลสำรอง) */
+  storage: "mariadb" | "demo" | "fallback";
+  dbError?: { code: string; message: string; hint: string; fix?: string; at: string } | null;
   trend: { labels: string[]; created: number[]; done: number[]; revenue: number[] };
 }
 
