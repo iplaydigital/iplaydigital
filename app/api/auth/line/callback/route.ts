@@ -2,20 +2,22 @@ import { requestMeta, setSessionCookie } from "../../../../../lib/auth";
 import { writeAudit, writeLogin } from "../../../../../lib/audit";
 import { clearStateCookie, loginError, readState, requestOrigin } from "../../../../../lib/oauth";
 import { ensureSeedUsers, isAllowedEmail, upsertOAuthUser } from "../../../../../lib/users";
+import { getOAuthConfig } from "../../../../../lib/oauth-config";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
-  const origin = requestOrigin(req);
+  const cfg = await getOAuthConfig();
+  const origin = cfg.publicUrl || requestOrigin(req);
   const code = url.searchParams.get("code");
   const state = url.searchParams.get("state");
 
   if (!code || !state || state !== readState(req)) return loginError(origin, "line_state");
   if (url.searchParams.get("error")) return loginError(origin, "line_cancelled");
 
-  const clientId = process.env.AUTH_LINE_ID || process.env.LINE_CHANNEL_ID;
-  const clientSecret = process.env.AUTH_LINE_SECRET || process.env.LINE_CHANNEL_SECRET;
+  const clientId = cfg.lineId;
+  const clientSecret = cfg.lineSecret;
   if (!clientId || !clientSecret) return loginError(origin, "line_not_configured");
 
   try {

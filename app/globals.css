@@ -994,3 +994,73 @@ button.module-chip:hover { border-color: var(--violet-2); }
 .tl-top b { font-size: 11.5px; font-weight: 600; }
 .tl-from { color: var(--muted); text-decoration: line-through; }
 .tl-to { color: #14855f; font-weight: 600; }
+
+/* ══════════════════════════════════════════════════════════════
+   BUTTON HOVER — ทุกปุ่ม: พื้นน้ำเงิน + ตัวอักษรขาว (ตามที่กำหนด)
+   ══════════════════════════════════════════════════════════════ */
+:root { --btn-hover: #2f7bf0; --btn-hover-2: #1f66d6; }
+
+.btn:hover:not(:disabled),
+.btn-primary:hover:not(:disabled),
+.btn-mint:hover:not(:disabled),
+.btn-ghost:hover:not(:disabled),
+.icon-btn:hover:not(:disabled),
+.send-btn:hover:not(:disabled),
+.login-submit:hover:not(:disabled),
+.auth-btn:hover:not(.disabled),
+.tabs button:not(.on):hover:not(:disabled),
+.seg button:not(.on):hover:not(:disabled),
+.dept-tab:hover:not(.on):not(:disabled),
+.cat-pill:hover:not(.off):not(:disabled),
+.chip:hover:not(.on),
+.module-chip:hover:not(:disabled),
+.nav-item:hover:not(.on) {
+  background: var(--btn-hover) !important;
+  border-color: var(--btn-hover) !important;
+  color: #fff !important;
+  box-shadow: 0 8px 20px -10px rgba(47, 123, 240, 0.75);
+}
+.btn:hover:not(:disabled) svg,
+.icon-btn:hover:not(:disabled) svg,
+.tabs button:not(.on):hover:not(:disabled) svg,
+.seg button:not(.on):hover:not(:disabled) svg,
+.dept-tab:hover:not(.on):not(:disabled) svg,
+.nav-item:hover:not(.on) svg,
+.module-chip:hover:not(:disabled) svg,
+.auth-btn:hover svg { color: #fff !important; stroke: #fff; }
+.btn:hover:not(:disabled) *,
+.nav-item:hover:not(.on) span { color: #fff !important; }
+.btn:active:not(:disabled),
+.btn-primary:active:not(:disabled) { background: var(--btn-hover-2) !important; border-color: var(--btn-hover-2) !important; color: #fff !important; }
+.btn:disabled, .icon-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ══════════════════════════════════════════════════════════════
+   SUPER ADMIN — ป้าย, การเชื่อมต่อ Login
+   ══════════════════════════════════════════════════════════════ */
+.super-tag {
+  display: inline-flex; align-items: center; font-size: 8.5px; font-weight: 800; letter-spacing: 0.6px;
+  padding: 1px 5px; border-radius: 5px; background: linear-gradient(135deg, #ffb020, #ff8a3d); color: #4a2600;
+  margin-left: 4px;
+}
+.user-pop .role-pill.super { background: linear-gradient(135deg, rgba(255, 176, 32, 0.22), rgba(255, 138, 61, 0.18)); color: #a35c00; }
+.super-badge {
+  display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 20px;
+  font-size: 9.5px; font-weight: 700; background: linear-gradient(135deg, #fff3d6, #ffe6c7); color: #a35c00;
+  border: 1px solid rgba(255, 176, 32, 0.35);
+}
+
+.login-state-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.login-state {
+  border: 1px solid var(--line); border-radius: 14px; padding: 11px 12px; background: var(--panel-2);
+  display: flex; flex-direction: column; gap: 3px;
+}
+.login-state.on { background: linear-gradient(120deg, rgba(34, 199, 147, 0.10), #fff 70%); border-color: rgba(34, 199, 147, 0.35); }
+.ls-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 2px; }
+.ls-head b { font-size: 12px; }
+.login-state .pill.ok { background: rgba(34, 199, 147, 0.16); color: #149c74; }
+.login-state .pill.warn { background: var(--yellow-soft); color: #b47600; }
+.redirect-row { display: flex; align-items: center; gap: 8px; padding: 7px 9px; border-radius: 11px; background: var(--panel-2); border: 1px dashed var(--stroke-2); }
+.redirect-row code { font-size: 10.5px; color: var(--text-2); white-space: nowrap; }
+@media (max-width: 900px) {
+  .login-state-grid { grid-template-columns: 1fr; }
+}

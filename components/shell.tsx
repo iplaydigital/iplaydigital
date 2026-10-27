@@ -290,9 +290,13 @@ function UserMenu() {
           <div className="up-head">
             <b>{me.name}</b>
             <div className="tiny muted">{me.email}</div>
-            <span className={`role-pill ${me.role}`}>
-              <ShieldCheck size={10} /> {me.role === "admin" ? "Admin · สิทธิ์เต็ม" : me.role === "support" ? "Support" : "Member"}
-            </span>
+            {me.isSuper ? (
+              <span className="role-pill super"><ShieldCheck size={10} /> SUPER ADMIN · ทุกสิทธิ์</span>
+            ) : (
+              <span className={`role-pill ${me.role}`}>
+                <ShieldCheck size={10} /> {me.role === "admin" ? "Admin · สิทธิ์เต็ม" : me.role === "support" ? "Support" : me.role === "manager" ? "Manager" : me.role === "ai" ? "ทีม AI" : "User"}
+              </span>
+            )}
           </div>
           {manager && (
             <>

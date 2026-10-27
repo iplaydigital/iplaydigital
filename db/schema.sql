@@ -319,3 +319,10 @@ CREATE TABLE IF NOT EXISTS ws_login_logs (
   KEY idx_ws_login_user (user_id),
   KEY idx_ws_login_at (at_time)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ── ตั้งค่า OAuth (Google / LINE Login) จากหน้า Super Admin ──
+CREATE TABLE IF NOT EXISTS ws_oauth (
+  id         VARCHAR(32) PRIMARY KEY,
+  data       JSON NULL,
+  updated_at VARCHAR(32) NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

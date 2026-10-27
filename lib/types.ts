@@ -257,6 +257,8 @@ export interface SessionUser {
   memberId?: ID | null;
   /** โมดูลที่เพิ่มให้เป็นพิเศษ (นอกเหนือจากสิทธิ์ตามบทบาท) */
   extraModules?: string[];
+  /** Super Admin — สิทธิ์สูงสุด จัดการได้ทุกอย่างรวมถึงการตั้งค่า Login/OAuth */
+  isSuper?: boolean;
 }
 
 // ── ประวัติการแก้ไข & การเข้าใช้ ────────────────────────────

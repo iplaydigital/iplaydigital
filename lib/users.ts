@@ -8,6 +8,7 @@ import path from "path";
 import crypto from "crypto";
 import type { AuthProvider, SessionUser, UserRole } from "./types";
 import { writeAudit, writeAuditDiff } from "./audit";
+import { superAdminEmails } from "./oauth-config";
 
 export interface User extends SessionUser {
   passwordHash?: string | null;
@@ -163,7 +164,71 @@ export function verifyPassword(pw: string, stored?: string | null) {
 
 export function toClient(u: User): SessionUser {
   const { passwordHash: _pw, phone: _phone, ...rest } = u;
-  return rest;
+  return { ...rest, isSuper: u.role === "admin" && superAdminEmails().includes(u.email.toLowerCase()) };
+}
+
+/** รหัสผ่าน Super Admin (ค่าเริ่มต้น admin123) */
+export function superAdminPassword() {
+  return process.env.SUPER_ADMIN_PASSWORD || "admin123";
+}
+
+const LEGACY_PASSWORDS = ["iplay@2026"];
+
+/**
+ * รับประกันว่าบัญชี Super Admin มีอยู่จริงและมีสิทธิ์ Admin
+ * - ยังไม่มี → สร้างให้พร้อมรหัสผ่าน SUPER_ADMIN_PASSWORD (ค่าเริ่มต้น admin123)
+ * - มีแล้วแต่สิทธิ์ต่ำกว่า admin → เลื่อนเป็น admin
+ * - รหัสผ่านยังเป็นค่าเริ่มต้นเดิม (iplay@2026) → ตั้งเป็นรหัส Super Admin
+ *   (ถ้าผู้ใช้เปลี่ยนรหัสเองแล้ว ระบบจะไม่เขียนทับ)
+ */
+export async function ensureSuperAdmins(): Promise<void> {
+  const emails = superAdminEmails();
+  const password = superAdminPassword();
+  const all = await listUsers();
+
+  for (const email of emails) {
+    const existing = all.find((u) => u.email.toLowerCase() === email);
+    if (!existing) {
+      const name = email.startsWith("it@") ? "ฝ่ายไอที (IT)" : email.split("@")[0];
+      try {
+        await createUser(
+          {
+            email,
+            name,
+            nickname: email.startsWith("it@") ? "IT" : email.split("@")[0],
+            role: "admin",
+            provider: "password",
+            passwordHash: hashPassword(password),
+            position: "Super Admin",
+            jobTitle: "Super Admin",
+            level: "C-level",
+            departmentId: email.startsWith("it@") ? "dep_dev" : "dep_exec",
+            active: true,
+          },
+          { silent: true },
+        );
+        await writeAudit({
+          actorId: "system", actorName: "ระบบ (Super Admin)",
+          targetType: "user", targetId: email, targetName: email,
+          action: "create", note: "สร้างบัญชี Super Admin อัตโนมัติ", ip: "seed",
+        });
+      } catch (err) {
+        console.warn(`[auth] ensureSuperAdmins: ${(err as Error).message}`);
+      }
+      continue;
+    }
+
+    const patch: Partial<User> = {};
+    if (existing.role !== "admin") patch.role = "admin";
+    if (!existing.active) patch.active = true;
+    if (!existing.passwordHash || LEGACY_PASSWORDS.some((pw) => verifyPassword(pw, existing.passwordHash))) {
+      patch.passwordHash = hashPassword(password);
+    }
+    if (Object.keys(patch).length) {
+      await updateUser(existing.id, patch, { silent: true });
+      console.log(`[auth] ปรับปรุง Super Admin: ${email}`);
+    }
+  }
 }
 
 // ── seed ────────────────────────────────────────────────────
@@ -186,7 +251,7 @@ const SEED_USERS: Omit<User, "passwordHash">[] = [
   },
   {
     id: "usr_it", email: "it@playdigital.co.th", name: "ฝ่ายไอที", nickname: "IT",
-    role: "support", provider: "password", color: "#2F7BF0", initials: "IT",
+    role: "admin", provider: "password", color: "#2F7BF0", initials: "IT",
     position: "IT Support", jobTitle: "IT Support", level: "Mid",
     departmentId: "dep_dev", teamId: "team_web", active: true,
     createdAt: new Date().toISOString(), memberId: null, lastLoginAt: null,
@@ -237,7 +302,10 @@ const SEED_USERS: Omit<User, "passwordHash">[] = [
 
 export async function ensureSeedUsers() {
   const existing = await listUsers();
-  if (existing.length) return existing;
+  if (existing.length) {
+    await ensureSuperAdmins();
+    return listUsers();
+  }
   const pw = process.env.ADMIN_INITIAL_PASSWORD || DEFAULT_PASSWORD;
   const hash = hashPassword(pw);
   const seeded: User[] = SEED_USERS.map((u) => ({ ...u, passwordHash: hash }));
@@ -252,8 +320,9 @@ export async function ensureSeedUsers() {
     });
     await writeLogin({ userId: u.id, email: u.email, provider: "password", ok: true, ip: "seed", reason: "บัญชีเริ่มต้น" });
   }
+  await ensureSuperAdmins();
   console.log(`[auth] seeded ${seeded.length} users · โดเมน ${allowedDomains().join(", ")}`);
-  return seeded;
+  return listUsers();
 }
 
 // ── CRUD ────────────────────────────────────────────────────
