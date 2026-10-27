@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { applyAction, getBootstrap } from "@/lib/store";
 import { requireUser } from "@/lib/auth";
+import { roleScope } from "@/lib/rbac";
 import type { Action } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -11,6 +12,14 @@ export async function POST(req: Request) {
   try {
     const action = (await req.json()) as Action;
     if (!action?.type) return NextResponse.json({ error: "missing action type" }, { status: 400 });
+
+    // การตั้งค่าระบบ: เฉพาะ Admin/Support · รีเซ็ตข้อมูล: เฉพาะ Admin
+    if (action.type === "settings.update" && !roleScope(user?.role).editSettings) {
+      return NextResponse.json({ error: "บทบาทของคุณไม่มีสิทธิ์แก้ไขการตั้งค่า" }, { status: 403 });
+    }
+    if (action.type === "reset" && user?.role !== "admin") {
+      return NextResponse.json({ error: "เฉพาะ Admin เท่านั้นที่รีเซ็ตข้อมูลได้" }, { status: 403 });
+    }
     // บังคับให้ action ที่ระบุผู้ทำ ใช้ตัวตนจาก session (กันปลอม authorId)
     if (user?.memberId) {
       if ("authorId" in action) action.authorId = user.memberId;

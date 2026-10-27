@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireUser } from "../../../../lib/auth";
+import { requireModule } from "../../../../lib/auth";
 import { uploadToDrive } from "../../../../lib/drive";
 
 export const dynamic = "force-dynamic";
@@ -7,7 +7,7 @@ export const maxDuration = 60;
 
 /** อัปโหลดไฟล์เข้า Google Drive (multipart: field "file") */
 export async function POST(req: Request) {
-  const { user, error } = await requireUser();
+  const { user, error } = await requireModule("reports");
   if (error || !user) return error;
 
   const form = await req.formData().catch(() => null);

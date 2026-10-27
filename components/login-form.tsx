@@ -81,7 +81,7 @@ export function LoginForm({ googleReady, lineReady }: { googleReady: boolean; li
               type="email"
               autoComplete="username"
               required
-              placeholder="name@iplaydigital.co"
+              placeholder="name@playdigital.co.th"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               disabled={busy}
@@ -131,9 +131,11 @@ export function LoginForm({ googleReady, lineReady }: { googleReady: boolean; li
 
       <div className="login-hint">
         <b>บัญชีเริ่มต้น (เปลี่ยนรหัสผ่านทันทีหลังเข้าใช้)</b>
-        <div><code>oak@iplaydigital.co</code> · admin</div>
-        <div><code>ploy@iplaydigital.co</code> · support</div>
-        <div><code>nan@iplaydigital.co</code> · member</div>
+        <div><code>oak@playdigital.co.th</code> · ทีมบริหาร</div>
+        <div><code>jimm@playdigital.co.th</code> · CTO</div>
+        <div><code>it@playdigital.co.th</code> · Support</div>
+        <div><code>ploy@playdigital.co.th</code> · Manager</div>
+        <div><code>nan@playdigital.co.th</code> · User</div>
         <div className="tiny muted">รหัสผ่านเริ่มต้น: <code>iplay@2026</code> (หรือค่าจาก <code>ADMIN_INITIAL_PASSWORD</code>)</div>
       </div>
     </>

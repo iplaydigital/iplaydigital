@@ -58,6 +58,24 @@ const dt = () => new Date().toISOString().slice(0, 19).replace("T", " ");
 const todayStr = () => new Date().toISOString().slice(0, 10);
 
 export async function ensureSchema() {
+  const p0 = pool();
+  // ตารางแผนก/ทีม (ใช้แสดงผลและอ้างอิง)
+  await p0.query(`CREATE TABLE IF NOT EXISTS ws_departments (
+    id VARCHAR(32) PRIMARY KEY, name VARCHAR(120) NOT NULL, short_name VARCHAR(12) NOT NULL DEFAULT '',
+    color VARCHAR(16) NOT NULL DEFAULT '#7100DD', sort_order INT NOT NULL DEFAULT 0,
+    head_id VARCHAR(32) NULL, description VARCHAR(255) NULL
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
+  await p0.query(`CREATE TABLE IF NOT EXISTS ws_teams (
+    id VARCHAR(32) PRIMARY KEY, name VARCHAR(120) NOT NULL, dept_id VARCHAR(32) NOT NULL,
+    color VARCHAR(16) NULL, lead_id VARCHAR(32) NULL
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
+  for (const sql of [
+    "ALTER TABLE ws_members ADD COLUMN dept_id VARCHAR(32) NULL",
+    "ALTER TABLE ws_members ADD COLUMN team_id VARCHAR(32) NULL",
+    "ALTER TABLE ws_members ADD COLUMN level VARCHAR(24) NULL",
+  ]) {
+    try { await pool().query(sql); } catch { /* มีอยู่แล้ว */ }
+  }
   if (!dbEnabled()) return;
   if (!g.__iplaySchemaReady) {
     g.__iplaySchemaReady = (async () => {
@@ -87,11 +105,12 @@ export async function seedDb(conn: mysql.PoolConnection) {
   const q = (sql: string, params: unknown[]) => conn.query(sql, params);
   for (const m of d.members) {
     await q(
-      `INSERT INTO ws_members (id,name,nickname,role,kind,initials,color,email,state,skills,model,paused,autonomy,runs,success_rate,tokens_today,current_task_id,workload,capacity,phone)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+      `INSERT INTO ws_members (id,name,nickname,role,kind,initials,color,email,state,skills,model,paused,autonomy,runs,success_rate,tokens_today,current_task_id,workload,capacity,phone,dept_id,team_id,level)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       [m.id, m.name, m.nickname, m.role, m.kind, m.initials, m.color, m.email, m.state, JSON.stringify(m.skills || []),
        m.model ?? null, m.paused ? 1 : 0, m.autonomy ?? 60, m.runs ?? 0, m.successRate ?? 90, m.tokensToday ?? 0,
-       m.currentTaskId ?? null, m.load ?? 0, m.capacity ?? 40, m.phone ?? null],
+       m.currentTaskId ?? null, m.load ?? 0, m.capacity ?? 40, m.phone ?? null,
+       m.departmentId ?? null, m.teamId ?? null, m.level ?? null],
     );
   }
   for (const p of d.projects) {
@@ -196,6 +215,9 @@ export async function fetchAll(): Promise<StoreData> {
       paused: !!m.paused, autonomy: m.autonomy, runs: m.runs, successRate: m.success_rate,
       tokensToday: m.tokens_today, currentTaskId: m.current_task_id ?? null,
       load: m.workload, capacity: m.capacity, phone: m.phone ?? undefined,
+      departmentId: (m.dept_id as string | null) ?? undefined,
+      teamId: (m.team_id as string | null) ?? null,
+      level: (m.level as string | null) ?? undefined,
     })),
     projects: projects.map<Project>((r) => ({
       id: r.id, code: r.code, name: r.name, client: r.client, color: remapColor(r.color) ?? r.color, grad: r.grad,

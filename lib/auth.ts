@@ -6,6 +6,7 @@ import crypto from "crypto";
 import { cookies } from "next/headers";
 import type { SessionUser, UserRole } from "./types";
 import { getUserById, toClient, type User } from "./users";
+import { canAccess, roleScope, type ModuleKey } from "./rbac";
 
 export const COOKIE = "ipw_session";
 const MAX_AGE = 60 * 60 * 24 * 7; // 7 วัน
@@ -68,8 +69,14 @@ export async function getSessionUser(): Promise<SessionUser | null> {
   return toClient(user);
 }
 
+/** ผู้ดูแลระบบ (ตั้งค่า/จัดการบัญชีขั้นสูง) = Admin หรือ Support */
 export function isManager(user: SessionUser | null | undefined): boolean {
   return user?.role === "admin" || user?.role === "support";
+}
+
+/** หัวหน้า/ผู้บริหารที่อนุมัติได้ */
+export function isApprover(user: SessionUser | null | undefined): boolean {
+  return roleScope(user?.role).approve;
 }
 
 export function canManageRole(actor: SessionUser | null, target: UserRole): boolean {
@@ -79,7 +86,7 @@ export function canManageRole(actor: SessionUser | null, target: UserRole): bool
   return actor.role === "support" && target !== "admin";
 }
 
-export const ROLE_META: Record<UserRole, { label: string; color: string; tone: string; desc: string }> = {
+export const LEGACY_ROLE_META: Record<string, { label: string; color: string; tone: string; desc: string }> = {
   admin: {
     label: "Admin",
     color: "var(--violet)",
@@ -114,6 +121,36 @@ export async function requireManager(): Promise<{ user: SessionUser | null; erro
   if (error) return { user, error };
   if (!isManager(user)) return { user, error: json({ error: "ต้องมีสิทธิ์ Admin หรือ Support" }, 403) };
   return { user };
+}
+
+/** ต้องมีสิทธิ์เข้าถึงโมดูลนั้น (ตาม RBAC) */
+export async function requireModule(mod: ModuleKey): Promise<{ user: SessionUser | null; error?: Response }> {
+  const { user, error } = await requireUser();
+  if (error) return { user, error };
+  if (!canAccess(user?.role, mod)) {
+    return { user, error: json({ error: `บทบาทของคุณไม่มีสิทธิ์เข้าถึงโมดูลนี้` }, 403) };
+  }
+  return { user };
+}
+
+/** ต้องมีสิทธิ์จัดการพนักงาน (Admin / Support / Manager) */
+export async function requireStaffManager(): Promise<{ user: SessionUser | null; error?: Response }> {
+  const { user, error } = await requireUser();
+  if (error) return { user, error };
+  if (!roleScope(user?.role).manageStaff) {
+    return { user, error: json({ error: "ต้องมีสิทธิ์จัดการพนักงาน" }, 403) };
+  }
+  return { user };
+}
+
+/** ข้อมูล IP/UA ของคำขอ (ใช้บันทึก log) */
+export function requestMeta(req: Request) {
+  const h = req.headers;
+  const ip =
+    h.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    h.get("x-real-ip") ||
+    "local";
+  return { ip, agent: (h.get("user-agent") || "").slice(0, 200) };
 }
 
 export function json(body: unknown, status = 200) {
