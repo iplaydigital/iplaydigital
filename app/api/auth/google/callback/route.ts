@@ -1,4 +1,5 @@
-import { setSessionCookie } from "../../../../../lib/auth";
+import { requestMeta, setSessionCookie } from "../../../../../lib/auth";
+import { writeAudit, writeLogin } from "../../../../../lib/audit";
 import { clearStateCookie, loginError, readState, requestOrigin } from "../../../../../lib/oauth";
 import { ensureSeedUsers, isAllowedEmail, upsertOAuthUser } from "../../../../../lib/users";
 
@@ -49,6 +50,12 @@ export async function GET(req: Request) {
       provider: "google",
     });
     await setSessionCookie(user.id);
+    const { ip, agent } = requestMeta(req);
+    await writeLogin({ userId: user.id, email: user.email, provider: "google", ok: true, ip, agent });
+    await writeAudit({
+      actorId: user.id, actorName: user.name, targetType: "user", targetId: user.id,
+      targetName: `${user.name} (${user.email})`, action: "login", note: `เข้าสู่ระบบด้วย Google · ${ip}`, ip,
+    });
 
     const res = new Response(null, { status: 302, headers: { location: `${origin}/` } });
     res.headers.append("set-cookie", clearStateCookie());

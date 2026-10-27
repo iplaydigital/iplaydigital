@@ -9,7 +9,8 @@
     "db:init": "tsx scripts/db-init.ts",
     "db:seed": "tsx scripts/db-seed.ts",
     "lint": "next lint",
-    "db:doctor": "tsx scripts/db-doctor.ts"
+    "db:doctor": "tsx scripts/db-doctor.ts",
+    "db:migrate": "tsx scripts/db-migrate.ts"
   },
   "dependencies": {
     "clsx": "^2.1.1",

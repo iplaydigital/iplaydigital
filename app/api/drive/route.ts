@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getBootstrap } from "../../../lib/store";
 import { driveKind } from "../../../lib/utils";
-import { requireUser } from "../../../lib/auth";
+import { requireModule } from "../../../lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
  * - ถ้าไม่ตั้ง จะคืนไฟล์ที่แชร์ใน Workspace (จาก DB)
  */
 export async function GET(req: Request) {
-  const { error } = await requireUser();
+  const { error } = await requireModule("chat");
   if (error) return error;
   const { searchParams } = new URL(req.url);
   const q = (searchParams.get("q") || "").toLowerCase();
@@ -38,7 +38,7 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  const { error } = await requireUser();
+  const { error } = await requireModule("chat");
   if (error) return error;
   // บันทึกไฟล์ที่แชร์จาก Drive picker เข้า workspace
   const body = (await req.json()) as { name?: string; url?: string; size?: string };

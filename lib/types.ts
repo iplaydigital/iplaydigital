@@ -9,12 +9,34 @@ export type EventCat = "work" | "meeting" | "delivery" | "finance" | "holiday" |
 export type AgentKind = "human" | "ai";
 export type AgentState = "online" | "focus" | "working" | "away" | "off";
 
+export interface Department {
+  id: ID;
+  name: string;
+  short: string;
+  color: string;
+  /** ลำดับการแสดง */
+  order: number;
+  headId?: ID | null;
+  desc?: string;
+}
+
+export interface Team {
+  id: ID;
+  name: string;
+  departmentId: ID;
+  color?: string;
+  leadId?: ID | null;
+}
+
 export interface Member {
   id: ID;
   name: string;
   nickname: string;
   role: string;
   kind: AgentKind;
+  departmentId?: ID;
+  teamId?: ID | null;
+  level?: string;
   initials: string;
   color: string;
   email: string;
@@ -210,7 +232,7 @@ export interface AiRun {
 }
 
 // ── ผู้ใช้ระบบ & สิทธิ์ ─────────────────────────────────────
-export type UserRole = "admin" | "support" | "member";
+export type UserRole = "admin" | "support" | "manager" | "ai" | "member";
 export type AuthProvider = "password" | "google" | "line";
 
 /** ข้อมูลผู้ใช้ที่ส่งไปฝั่ง client (ไม่มีรหัสผ่าน) */
@@ -224,10 +246,48 @@ export interface SessionUser {
   color: string;
   initials: string;
   position?: string;
+  jobTitle?: string;
+  level?: string;
+  departmentId?: ID | null;
+  teamId?: ID | null;
   active: boolean;
   createdAt: string;
+  updatedAt?: string | null;
   lastLoginAt?: string | null;
   memberId?: ID | null;
+  /** โมดูลที่เพิ่มให้เป็นพิเศษ (นอกเหนือจากสิทธิ์ตามบทบาท) */
+  extraModules?: string[];
+}
+
+// ── ประวัติการแก้ไข & การเข้าใช้ ────────────────────────────
+export type AuditAction = "create" | "update" | "delete" | "login" | "logout" | "password" | "role" | "status" | "department" | "approve" | "reject";
+
+export interface AuditEntry {
+  id: ID;
+  at: string;
+  actorId: ID;
+  actorName: string;
+  targetType: "user" | "member" | "report" | "department" | "team" | "settings" | "asset";
+  targetId: ID;
+  targetName: string;
+  action: AuditAction;
+  field?: string;
+  from?: string;
+  to?: string;
+  note?: string;
+  ip?: string;
+}
+
+export interface LoginLog {
+  id: ID;
+  at: string;
+  userId: ID;
+  email: string;
+  provider: AuthProvider | "session";
+  ok: boolean;
+  ip?: string;
+  agent?: string;
+  reason?: string;
 }
 
 // ── รายงาน (เชื่อม Google Drive) ────────────────────────────
@@ -272,6 +332,8 @@ export interface Settings {
 
 export interface Bootstrap {
   members: Member[];
+  departments: Department[];
+  teams: Team[];
   projects: Project[];
   tasks: Task[];
   events: CalendarEvent[];

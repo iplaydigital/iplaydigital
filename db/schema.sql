@@ -266,3 +266,56 @@ CREATE TABLE IF NOT EXISTS ws_reports (
   KEY idx_ws_reports_status (status),
   KEY idx_ws_reports_author (author_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ═══════════════════════════════════════════════════════════════
+--  แผนก / ทีม และประวัติการใช้งาน (RBAC + audit)
+-- ═══════════════════════════════════════════════════════════════
+CREATE TABLE IF NOT EXISTS ws_departments (
+  id          VARCHAR(32) PRIMARY KEY,
+  name        VARCHAR(120) NOT NULL,
+  short_name  VARCHAR(12)  NOT NULL DEFAULT '',
+  color       VARCHAR(16)  NOT NULL DEFAULT '#7100DD',
+  sort_order  INT NOT NULL DEFAULT 0,
+  head_id     VARCHAR(32) NULL,
+  description VARCHAR(255) NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS ws_teams (
+  id      VARCHAR(32) PRIMARY KEY,
+  name    VARCHAR(120) NOT NULL,
+  dept_id VARCHAR(32) NOT NULL,
+  color   VARCHAR(16) NULL,
+  lead_id VARCHAR(32) NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS ws_audit_logs (
+  id          VARCHAR(40) PRIMARY KEY,
+  at_time     VARCHAR(32) NOT NULL,
+  actor_id    VARCHAR(40) NULL,
+  actor_name  VARCHAR(160) NOT NULL DEFAULT '',
+  target_type VARCHAR(24) NOT NULL DEFAULT 'user',
+  target_id   VARCHAR(40) NULL,
+  target_name VARCHAR(200) NOT NULL DEFAULT '',
+  action      VARCHAR(24) NOT NULL DEFAULT 'update',
+  field_name  VARCHAR(64) NULL,
+  from_value  TEXT NULL,
+  to_value    TEXT NULL,
+  note        TEXT NULL,
+  ip          VARCHAR(64) NULL,
+  KEY idx_ws_audit_target (target_type, target_id),
+  KEY idx_ws_audit_at (at_time)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS ws_login_logs (
+  id       VARCHAR(40) PRIMARY KEY,
+  at_time  VARCHAR(32) NOT NULL,
+  user_id  VARCHAR(40) NULL,
+  email    VARCHAR(190) NOT NULL DEFAULT '',
+  provider VARCHAR(24) NOT NULL DEFAULT 'password',
+  ok       TINYINT(1) NOT NULL DEFAULT 1,
+  ip       VARCHAR(64) NULL,
+  agent    VARCHAR(255) NULL,
+  reason   VARCHAR(160) NULL,
+  KEY idx_ws_login_user (user_id),
+  KEY idx_ws_login_at (at_time)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

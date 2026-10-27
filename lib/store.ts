@@ -4,8 +4,9 @@ import type { Action, Bootstrap, Message, ActivityItem, CalendarEvent, Task } fr
 import { seedData, trendData } from "./seed";
 import { uid, STATUS_ORDER, CAT_META, pad, remapColor } from "./utils";
 import { describeDbError } from "./db-diag";
+import { DEPARTMENTS, TEAMS } from "./org";
 
-export type StoreData = Omit<Bootstrap, "trend" | "storage" | "today" | "reports">;
+export type StoreData = Omit<Bootstrap, "trend" | "storage" | "today" | "reports" | "departments" | "teams">;
 
 const FILE = path.join(process.cwd(), ".data", "store.json");
 const g = globalThis as unknown as {
@@ -371,6 +372,8 @@ export function getDemoBootstrap(): Bootstrap {
     storage: "demo",
     dbError: null,
     reports: [],
+    departments: DEPARTMENTS,
+    teams: TEAMS,
     trend: trendData(),
   };
 }
@@ -383,7 +386,7 @@ export async function getBootstrap(): Promise<Bootstrap> {
       const { fetchAll } = await import("./db-maria");
       const data = await fetchAll();
       g.__dbErr = null;
-      return { ...data, today: todayISO(), storage: "mariadb", dbError: null, reports, trend: trendData() };
+      return { ...data, today: todayISO(), storage: "mariadb", dbError: null, reports, departments: DEPARTMENTS, teams: TEAMS, trend: trendData() };
     } catch (err) {
       const info = describeDbError(err);
       g.__dbErr = info;
@@ -392,10 +395,10 @@ export async function getBootstrap(): Promise<Bootstrap> {
       if (process.env.DB_REQUIRED === "1") {
         throw Object.assign(new Error(info.message), { dbError: info });
       }
-      return { ...demo, reports, storage: "fallback", dbError: info };
+      return { ...demo, reports, departments: DEPARTMENTS, teams: TEAMS, storage: "fallback", dbError: info };
     }
   }
-  return { ...getDemoBootstrap(), reports };
+  return { ...getDemoBootstrap(), reports, departments: DEPARTMENTS, teams: TEAMS };
 }
 
 /** mutation: ถ้า DB ล่มและไม่ได้บังคับ DB_REQUIRED จะเขียนลง store สำรองเพื่อให้งานไม่หาย */

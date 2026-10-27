@@ -15,31 +15,42 @@ import { LedView } from "./led-view";
 import { SettingsView } from "./settings-view";
 import { ChatDock, ChatWorkspace } from "./chat-panel";
 import { ReportsView } from "./reports-view";
+import { StaffView } from "./staff-view";
+import { RoleDashboard } from "./role-dashboard";
 import { DbBanner } from "./db-status";
 import { EventModal, GlobalSearch, NewTaskModal, TaskDrawer } from "./task-ui";
 import { Avatar, Modal } from "./ui";
 import { cls, thaiFull, thaiTime } from "../lib/utils";
+import { ROLE_META, canAccess, type ModuleKey } from "../lib/rbac";
 
-const NAV: { group: string; items: { key: View; label: string; icon: React.ReactNode; meta?: string }[] }[] = [
+interface NavItem { key: View; label: string; icon: React.ReactNode; module: ModuleKey; meta?: string }
+
+const NAV: { group: string; items: NavItem[] }[] = [
   {
     group: "Workspace",
     items: [
-      { key: "dashboard", label: "แดชบอร์ด", icon: <LayoutDashboard size={16} /> },
-      { key: "calendar", label: "ปฏิทิน", icon: <CalendarDays size={16} /> },
-      { key: "tasks", label: "งาน & Kanban", icon: <Columns3 size={16} />, meta: "tasks" },
-      { key: "ai", label: "AI Workforce", icon: <Bot size={16} />, meta: "ai" },
-      { key: "chat", label: "แชท & Drive", icon: <MessageSquare size={16} />, meta: "chat" },
-      { key: "reports", label: "รายงาน & Drive", icon: <FileBarChart2 size={16} /> },
-      { key: "hr", label: "HR & ลงเวลา", icon: <Users size={16} /> },
+      { key: "dashboard", label: "แดชบอร์ด", icon: <LayoutDashboard size={16} />, module: "dashboard" },
+      { key: "calendar", label: "ปฏิทิน", icon: <CalendarDays size={16} />, module: "calendar" },
+      { key: "tasks", label: "งาน & Kanban", icon: <Columns3 size={16} />, module: "tasks", meta: "tasks" },
+      { key: "ai", label: "AI Workforce", icon: <Bot size={16} />, module: "ai", meta: "ai" },
+      { key: "chat", label: "แชท & Drive", icon: <MessageSquare size={16} />, module: "chat", meta: "chat" },
+      { key: "reports", label: "รายงาน & Drive", icon: <FileBarChart2 size={16} />, module: "reports" },
+      { key: "hr", label: "HR & ลงเวลา", icon: <Users size={16} />, module: "hr" },
+    ],
+  },
+  {
+    group: "บริหารองค์กร",
+    items: [
+      { key: "staff", label: "พนักงาน & สิทธิ์", icon: <UserCog size={16} />, module: "staff" },
     ],
   },
   {
     group: "จอแสดงผล",
-    items: [{ key: "led", label: "LED Wall · Park Silom", icon: <MonitorPlay size={16} /> }],
+    items: [{ key: "led", label: "LED Wall · Park Silom", icon: <MonitorPlay size={16} />, module: "led" }],
   },
   {
     group: "ระบบ",
-    items: [{ key: "settings", label: "ตั้งค่า", icon: <Settings size={16} /> }],
+    items: [{ key: "settings", label: "ตั้งค่า", icon: <Settings size={16} />, module: "settings" }],
   },
 ];
 
@@ -51,6 +62,7 @@ const TITLES: Record<View, { title: string; sub: string }> = {
   chat: { title: "แชท & Google Drive", sub: "กลุ่ม · ปักหมุด · แชร์เอกสาร · AI ช่วยตอบ" },
   reports: { title: "รายงาน & Google Drive", sub: "สร้าง/แก้ไขรายงาน · แนบไฟล์ Drive · อนุมัติ" },
   hr: { title: "HR & ลงเวลา", sub: "เช็คอินนอกสถานที่ · ลา · จองห้องประชุม" },
+  staff: { title: "พนักงาน & สิทธิ์", sub: "ทะเบียนพนักงานแยกแผนก · ประวัติแก้ไข · การเข้าใช้ระบบ" },
   led: { title: "LED Wall", sub: "เชื่อมจอ Playwall Park Silom" },
   settings: { title: "ตั้งค่า", sub: "องค์กร · พนักงาน & สิทธิ์ · รายงาน & Drive · ฐานข้อมูล" },
 };
@@ -68,6 +80,7 @@ export function Shell() {
   const tokens = useMemo(() => data?.members.filter((m) => m.kind === "ai").reduce((s, m) => s + (m.tokensToday ?? 0), 0) ?? 0, [data]);
   const pendingLeaves = data?.leaves.filter((l) => l.status === "pending").length ?? 0;
   const me = data?.members.find((m) => m.id === data?.meId);
+  const session = useApp().me;
 
   const badge = (meta?: string) => {
     if (meta === "tasks") return openTasks;
@@ -88,10 +101,13 @@ export function Shell() {
           </div>
         </div>
 
-        {NAV.map((group) => (
+        {NAV.map((group) => {
+          const items = group.items.filter((it) => !session || canAccess(session.role, it.module));
+          if (!items.length) return null;
+          return (
           <React.Fragment key={group.group}>
             <div className="side-label">{group.group}</div>
-            {group.items.map((item) => (
+            {items.map((item) => (
               <button key={item.key} className={cls("nav-item", view === item.key && "on")} onClick={() => go(item.key)}>
                 {item.icon}
                 <span>{item.label}</span>
@@ -105,7 +121,8 @@ export function Shell() {
               </button>
             ))}
           </React.Fragment>
-        ))}
+          );
+        })}
 
         <div className="side-foot">
           <div className="side-card">
@@ -121,6 +138,12 @@ export function Shell() {
           <div className="tiny muted" style={{ padding: "6px 10px", display: "flex", gap: 6, alignItems: "center" }}>
             <Cloud size={11} /> Drive + MCP พร้อมใช้งาน
           </div>
+          {session && (
+            <div className="role-foot" style={{ padding: "8px 10px", borderRadius: 12, background: ROLE_META[session.role].soft, color: ROLE_META[session.role].color, fontSize: 10.5 }}>
+              <b style={{ display: "flex", alignItems: "center", gap: 5 }}><ShieldCheck size={11} /> {ROLE_META[session.role].label}</b>
+              <div style={{ color: "var(--muted)", marginTop: 2 }}>{session.departmentId ? "เห็นข้อมูลตามแผนกที่กำหนด" : ROLE_META[session.role].desc}</div>
+            </div>
+          )}
         </div>
       </aside>
 
@@ -184,13 +207,14 @@ export function Shell() {
           )}
           {data && (
             <>
-              {view === "dashboard" && <Dashboard />}
+              {view === "dashboard" && (session ? <RoleDashboard me={session} /> : <Dashboard />)}
               {view === "calendar" && <CalendarView />}
               {view === "tasks" && <TasksView />}
               {view === "ai" && <AiWorkforce />}
               {view === "chat" && <ChatWorkspace />}
               {view === "reports" && <ReportsView />}
               {view === "hr" && <HrView />}
+              {view === "staff" && <StaffView />}
               {view === "led" && <LedView />}
               {view === "settings" && <SettingsView />}
             </>

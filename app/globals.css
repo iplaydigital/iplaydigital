@@ -925,3 +925,72 @@ h1, h2, h3, h4, p { margin: 0; }
   .brand-logo { height: 26px; }
   .report-card p { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 }
+
+/* ══════════════════════════════════════════════════════════════
+   RBAC · แผนก/ทีม · ทะเบียนพนักงาน · ประวัติ (audit/login)
+   ══════════════════════════════════════════════════════════════ */
+.role-banner {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  padding: 12px 14px; border-radius: 16px; border: 1px solid var(--line); background: #fff;
+}
+.role-foot { border: 1px solid rgba(0, 0, 0, 0.03); }
+
+.dept-tabs { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 4px; }
+.dept-tab {
+  display: inline-flex; align-items: center; gap: 6px; padding: 6px 11px; border-radius: 20px;
+  border: 1px solid var(--line); background: #fff; font-size: 11.5px; color: var(--text-2); white-space: nowrap;
+  transition: 0.15s;
+}
+.dept-tab:hover:not(:disabled) { border-color: var(--violet-2); color: var(--violet); }
+.dept-tab.on { background: var(--violet-soft); border-color: var(--violet-2); color: var(--violet); font-weight: 600; }
+.dept-tab b { font-variant-numeric: tabular-nums; font-size: 10.5px; background: var(--panel-2); border-radius: 20px; padding: 0 6px; }
+.dept-tab.off, .dept-tab:disabled { opacity: 0.45; cursor: not-allowed; }
+.dept-tab .dot { width: 7px; height: 7px; border-radius: 50%; flex: 0 0 auto; }
+
+.staff-table td, .staff-table th { font-size: 11.5px; }
+.staff-table tbody tr { cursor: pointer; }
+
+.drawer-overlay {
+  position: fixed; inset: 0; background: rgba(30, 26, 66, 0.28); backdrop-filter: blur(2px); z-index: 70;
+  animation: fade 0.15s ease-out;
+}
+.staff-drawer {
+  position: fixed; right: 0; top: 0; bottom: 0; width: min(460px, 96vw); background: #fff; z-index: 71;
+  border-left: 1px solid var(--line); box-shadow: -20px 0 60px rgba(40, 34, 90, 0.16);
+  display: flex; flex-direction: column; animation: slideIn 0.18s ease-out;
+}
+.staff-drawer .drawer-head { padding: 16px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--line); }
+.staff-drawer .drawer-body { flex: 1; overflow-y: auto; padding: 14px 16px 24px; }
+
+.kv-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.kv { display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; border-radius: 11px; background: var(--panel-2); }
+.kv span { font-size: 10px; color: var(--muted); }
+.kv b { font-size: 11.5px; font-weight: 600; color: var(--text); }
+
+.module-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 6px; }
+.module-chip {
+  display: inline-flex; align-items: center; gap: 5px; padding: 6px 9px; border-radius: 10px;
+  border: 1px dashed var(--stroke-2); background: #fff; font-size: 10.5px; color: var(--muted);
+  justify-content: flex-start; text-align: left; line-height: 1.35;
+}
+.module-chip.on { border-style: solid; border-color: rgba(34, 199, 147, 0.35); background: rgba(34, 199, 147, 0.08); color: #14855f; }
+.module-chip.extra { border-color: var(--violet-2); background: var(--violet-soft); color: var(--violet); }
+.module-chip small { font-size: 8.5px; opacity: 0.7; margin-left: auto; }
+button.module-chip:hover { border-color: var(--violet-2); }
+
+.timeline { display: flex; flex-direction: column; gap: 10px; position: relative; padding-left: 4px; }
+.tl-item { display: flex; gap: 9px; }
+.tl-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted-2); margin-top: 5px; flex: 0 0 auto; }
+.tl-dot.create { background: var(--mint); }
+.tl-dot.update { background: var(--cyan); }
+.tl-dot.delete { background: var(--red); }
+.tl-dot.role { background: var(--violet); }
+.tl-dot.status { background: var(--amber); }
+.tl-dot.department { background: var(--indigo); }
+.tl-dot.login { background: #2f7bf0; }
+.tl-dot.logout { background: var(--muted); }
+.tl-body { flex: 1; border-bottom: 1px dashed var(--line); padding-bottom: 8px; display: flex; flex-direction: column; gap: 2px; }
+.tl-top { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.tl-top b { font-size: 11.5px; font-weight: 600; }
+.tl-from { color: var(--muted); text-decoration: line-through; }
+.tl-to { color: #14855f; font-weight: 600; }

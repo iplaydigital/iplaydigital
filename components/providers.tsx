@@ -3,7 +3,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import type { Action, Bootstrap, CalendarEvent, SessionUser, Task } from "../lib/types";
 
-export const VIEWS = ["dashboard", "calendar", "tasks", "ai", "chat", "reports", "hr", "led", "settings"] as const;
+export const VIEWS = ["dashboard", "calendar", "tasks", "ai", "chat", "reports", "hr", "staff", "led", "settings"] as const;
 export type View = (typeof VIEWS)[number];
 type Toast = { id: number; text: string; kind: "ok" | "err" | "ai" | "info" };
 
