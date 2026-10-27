@@ -1,10 +1,11 @@
 // ─────────────────────────────────────────────────────────────
-//  Google Drive — อัปโหลดไฟล์รายงานเข้าโฟลเดอร์กลาง
-//  รองรับ 3 โหมด
-//   1) oauth : GOOGLE_DRIVE_CLIENT_ID + CLIENT_SECRET + REFRESH_TOKEN (+ FOLDER_ID)
-//   2) link  : ยังไม่ตั้งค่า → UI ให้แนบ/แนบลิงก์ไฟล์ Drive เอง (โหมดตัวอย่าง)
+//  Google Drive — อัปโหลดภายใต้บัญชี Google (Gmail) ของผู้ใช้เอง
+//  ลำดับการเลือก credential
+//    1) user   : refresh token ที่ผู้ใช้เชื่อมไว้ (Drive ของเขาเอง) ← โหมดหลัก
+//    2) oauth  : GOOGLE_DRIVE_REFRESH_TOKEN ส่วนกลาง (บัญชีบริการของทีม)
+//    3) link   : ยังไม่เชื่อม → UI ให้แนบลิงก์ไฟล์ Drive เอง
 // ─────────────────────────────────────────────────────────────
-export type DriveMode = "oauth" | "link";
+export type DriveMode = "user" | "oauth" | "link";
 
 export interface DriveStatus {
   mode: DriveMode;
@@ -12,6 +13,8 @@ export interface DriveStatus {
   folderId: string | null;
   folderUrl: string;
   hint: string;
+  /** true = ต้องให้ผู้ใช้เชื่อม Google Drive ของตนเองก่อน */
+  needsUserConnect?: boolean;
 }
 
 export function driveFolderId(): string | null {
@@ -25,25 +28,32 @@ export function driveFolderUrl(): string {
   return process.env.NEXT_PUBLIC_DRIVE_FOLDER || "https://drive.google.com/drive/folders/1iPlayDigitalWorkspace";
 }
 
-export function driveStatus(): DriveStatus {
-  const oauth = !!(process.env.GOOGLE_DRIVE_CLIENT_ID && process.env.GOOGLE_DRIVE_CLIENT_SECRET && process.env.GOOGLE_DRIVE_REFRESH_TOKEN);
-  const mode: DriveMode = oauth ? "oauth" : "link";
+export function driveStatus(user?: { driveConnected?: boolean; driveEmail?: string | null }): DriveStatus {
+  const oauth = !!(process.env.GOOGLE_DRIVE_REFRESH_TOKEN || (process.env.GOOGLE_DRIVE_CLIENT_ID && process.env.GOOGLE_DRIVE_CLIENT_SECRET));
+  const userDrive = Boolean(user?.driveConnected);
+  const mode: DriveMode = userDrive ? "user" : oauth ? "oauth" : "link";
   return {
     mode,
     configured: mode !== "link",
     folderId: driveFolderId(),
     folderUrl: driveFolderUrl(),
+    needsUserConnect: !userDrive,
     hint:
-      mode === "link"
-        ? "ยังไม่ได้ตั้งค่า Google Drive API — ระบบเก็บเป็นลิงก์ไฟล์ (แนบลิงก์ Drive เองได้) ตั้งค่า GOOGLE_DRIVE_* เพื่ออัปโหลดจริง"
-        : "อัปโหลดเข้า Google Drive ด้วย OAuth refresh token",
+      mode === "user"
+        ? `อัปโหลดเข้า Google Drive ของคุณเอง (${user?.driveEmail ?? "บัญชี Google ที่เชื่อมไว้"})`
+        : mode === "oauth"
+          ? "อัปโหลดด้วยบัญชีบริการของทีม — แนะนำให้เชื่อม Google Drive ของคุณเองเพื่อให้ไฟล์อยู่ใต้ Gmail ของคุณ"
+          : "ยังไม่ได้เชื่อม Google Drive — เชื่อมบัญชี Google (Gmail) ของคุณก่อน แล้วจึงอัปโหลดไฟล์ได้",
   };
 }
 
-async function accessToken(): Promise<string> {
-  const clientId = process.env.GOOGLE_DRIVE_CLIENT_ID;
-  const clientSecret = process.env.GOOGLE_DRIVE_CLIENT_SECRET;
-  const refreshToken = process.env.GOOGLE_DRIVE_REFRESH_TOKEN;
+async function accessToken(userRefreshToken?: string | null): Promise<string> {
+  const { getOAuthConfig } = await import("./oauth-config");
+  const cfg = await getOAuthConfig();
+  const clientId = cfg.googleId || process.env.GOOGLE_DRIVE_CLIENT_ID;
+  const clientSecret = cfg.googleSecret || process.env.GOOGLE_DRIVE_CLIENT_SECRET;
+  // ใช้ token ของผู้ใช้เองก่อนเสมอ (Drive ภายใต้ Gmail ของเขา)
+  const refreshToken = userRefreshToken || process.env.GOOGLE_DRIVE_REFRESH_TOKEN;
 
   if (clientId && clientSecret && refreshToken) {
     const res = await fetch("https://oauth2.googleapis.com/token", {
@@ -82,24 +92,23 @@ function humanSize(bytes: number) {
 }
 
 /** อัปโหลดไฟล์เข้าโฟลเดอร์กลางด้วย multipart upload */
-export async function uploadToDrive(file: {
-  name: string;
-  type: string;
-  bytes: ArrayBuffer;
-}): Promise<DriveUploadResult> {
-  const st = driveStatus();
-  if (!st.configured) {
+export async function uploadToDrive(
+  file: { name: string; type: string; bytes: ArrayBuffer },
+  user?: { driveRefreshToken?: string | null; driveConnected?: boolean; driveEmail?: string | null },
+): Promise<DriveUploadResult> {
+  const st = driveStatus(user);
+  if (!st.configured || (!user?.driveRefreshToken && !process.env.GOOGLE_DRIVE_REFRESH_TOKEN)) {
     return {
       ok: false,
       configured: false,
       mode: st.mode,
-      error: "ยังไม่ได้เชื่อมต่อ Google Drive API",
+      error: "ยังไม่ได้เชื่อมต่อ Google Drive",
       hint: st.hint,
     };
   }
 
   try {
-    const token = await accessToken();
+    const token = await accessToken(user?.driveRefreshToken);
     const boundary = `ipw${Date.now().toString(36)}`;
     const meta: Record<string, unknown> = { name: file.name };
     if (st.folderId) meta.parents = [st.folderId];

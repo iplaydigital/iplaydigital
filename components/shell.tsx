@@ -4,6 +4,7 @@ import React, { useMemo } from "react";
 import {
   Bell, Bot, CalendarDays, ChevronDown, Columns3, Command, FileBarChart2, KeyRound, LayoutDashboard,
   LogOut, MessageSquare, MonitorPlay, Plus, Search, Settings, ShieldCheck, Sparkles, Users, UserCog, Zap, Cloud,
+  Link2, UserCircle2,
 } from "lucide-react";
 import { useApp, type View } from "./providers";
 import { Dashboard } from "./dashboard";
@@ -16,6 +17,7 @@ import { SettingsView } from "./settings-view";
 import { ChatDock, ChatWorkspace } from "./chat-panel";
 import { ReportsView } from "./reports-view";
 import { StaffView } from "./staff-view";
+import { ProfileView } from "./profile-view";
 import { RoleDashboard } from "./role-dashboard";
 import { DbBanner } from "./db-status";
 import { EventModal, GlobalSearch, NewTaskModal, TaskDrawer } from "./task-ui";
@@ -50,7 +52,10 @@ const NAV: { group: string; items: NavItem[] }[] = [
   },
   {
     group: "ระบบ",
-    items: [{ key: "settings", label: "ตั้งค่า", icon: <Settings size={16} />, module: "settings" }],
+    items: [
+      { key: "profile", label: "โปรไฟล์ของฉัน", icon: <UserCircle2 size={16} />, module: "dashboard" },
+      { key: "settings", label: "ตั้งค่า", icon: <Settings size={16} />, module: "settings" },
+    ],
   },
 ];
 
@@ -65,6 +70,7 @@ const TITLES: Record<View, { title: string; sub: string }> = {
   staff: { title: "พนักงาน & สิทธิ์", sub: "ทะเบียนพนักงานแยกแผนก · ประวัติแก้ไข · การเข้าใช้ระบบ" },
   led: { title: "LED Wall", sub: "เชื่อมจอ Playwall Park Silom" },
   settings: { title: "ตั้งค่า", sub: "องค์กร · พนักงาน & สิทธิ์ · รายงาน & Drive · ฐานข้อมูล" },
+  profile: { title: "โปรไฟล์ของฉัน", sub: "ช่องทางเข้าสู่ระบบ · Google / LINE · Google Drive ของคุณ" },
 };
 
 export function Shell() {
@@ -217,6 +223,7 @@ export function Shell() {
               {view === "staff" && <StaffView />}
               {view === "led" && <LedView />}
               {view === "settings" && <SettingsView />}
+              {view === "profile" && <ProfileView />}
             </>
           )}
         </div>
@@ -311,6 +318,9 @@ function UserMenu() {
               </button>
             </>
           )}
+          <button onClick={() => { setOpen(false); go("profile"); }}>
+            <Link2 size={14} /> โปรไฟล์ & ช่องทาง Login
+          </button>
           <button onClick={() => { setOpen(false); setPwOpen(true); }}>
             <KeyRound size={14} /> เปลี่ยนรหัสผ่าน
           </button>

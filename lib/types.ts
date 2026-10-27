@@ -259,6 +259,16 @@ export interface SessionUser {
   extraModules?: string[];
   /** Super Admin — สิทธิ์สูงสุด จัดการได้ทุกอย่างรวมถึงการตั้งค่า Login/OAuth */
   isSuper?: boolean;
+  /** บัญชีที่ผูกไว้ (Google / LINE / Drive ของผู้ใช้เอง) */
+  linked?: {
+    google: boolean;
+    googleEmail: string | null;
+    line: boolean;
+    lineName: string | null;
+    linePicture: string | null;
+    drive: boolean;
+    driveEmail: string | null;
+  };
 }
 
 // ── ประวัติการแก้ไข & การเข้าใช้ ────────────────────────────
@@ -269,7 +279,7 @@ export interface AuditEntry {
   at: string;
   actorId: ID;
   actorName: string;
-  targetType: "user" | "member" | "report" | "department" | "team" | "settings" | "asset";
+  targetType: "user" | "member" | "report" | "department" | "team" | "settings" | "asset" | "chat";
   targetId: ID;
   targetName: string;
   action: AuditAction;

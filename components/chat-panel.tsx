@@ -4,7 +4,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   AtSign, Bot, ChevronRight, Cloud, FolderOpen, Hash, Link2, MessageSquare,
   Paperclip, Pause, Pin, PinOff, Play, Plus, Search, Send, Smile, Sparkles,
-  Users, X, Zap, FileText, ExternalLink,
+  Users, X, Zap, FileText, ExternalLink, MessageCircle, Inbox, Link as LinkIcon, Unlink, RefreshCw,
 } from "lucide-react";
 import { useApp, useAiChat } from "./providers";
 import { Avatar, Empty, FileBadge, Modal } from "./ui";
@@ -164,6 +164,7 @@ export function ChatCore({ compact = false }: { compact?: boolean }) {
   const [text, setText] = useState("");
   const [showPins, setShowPins] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
+  const [lineOpen, setLineOpen] = useState(false);
   const [sending, setSending] = useState(false);
   const bodyRef = useRef<HTMLDivElement>(null);
   const { map } = useMembers();
@@ -265,6 +266,9 @@ export function ChatCore({ compact = false }: { compact?: boolean }) {
           <button className="msg-act" title="แนบไฟล์จาก Google Drive" onClick={() => setShareOpen(true)} style={{ padding: 5 }}>
             <Paperclip size={15} />
           </button>
+          <button className="msg-act" title="ส่งเข้า LINE (ผู้ใช้ / กลุ่ม)" onClick={() => setLineOpen(true)} style={{ padding: 5, color: "#06C755" }}>
+            <MessageCircle size={15} />
+          </button>
           <textarea
             rows={1}
             placeholder={channel.type === "ai" ? "สั่งงาน AI เช่น “สรุปงานด่วนวันนี้”" : `ข้อความถึง #${channel.name}…`}
@@ -295,6 +299,14 @@ export function ChatCore({ compact = false }: { compact?: boolean }) {
         <ShareDriveModal
           onClose={() => setShareOpen(false)}
           onShare={async (f) => { await shareFile(f); setShareOpen(false); }}
+        />
+      )}
+      {lineOpen && (
+        <LineSendModal
+          channelId={channel.id}
+          channelName={channel.type === "group" ? `#${channel.name}` : channel.name}
+          initialText={text}
+          onClose={() => setLineOpen(false)}
         />
       )}
     </div>
@@ -659,4 +671,244 @@ export function ChatWorkspace() {
       </aside>
     </div>
   );
+}
+
+
+// ── ส่งข้อความเข้า LINE (ผู้ใช้ปลายทาง / กลุ่ม LINE) ─────────
+interface LineBinding {
+  id: string;
+  channelId: string;
+  targetId: string;
+  targetType: "group" | "room" | "user";
+  label?: string;
+  createdAt: string;
+}
+
+interface LineInboxItem {
+  id: string;
+  at: string;
+  type: string;
+  summary: string;
+  profileName?: string;
+  groupId?: string;
+  channelId?: string | null;
+}
+
+export function LineSendModal({
+  channelId,
+  channelName,
+  initialText = "",
+  onClose,
+}: {
+  channelId: string;
+  channelName: string;
+  initialText?: string;
+  onClose: () => void;
+}) {
+  const { toast } = useApp();
+  const [text, setText] = useState(initialText);
+  const [bindings, setBindings] = useState<LineBinding[]>([]);
+  const [inbox, setInbox] = useState<LineInboxItem[]>([]);
+  const [status, setStatus] = useState<{ configured: boolean; userLinked: boolean; userLinkedName: string | null; webhookUrl: string } | null>(null);
+  const [target, setTarget] = useState("");
+  const [newTarget, setNewTarget] = useState("");
+  const [newLabel, setNewLabel] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const load = React.useCallback(async () => {
+    const [bRes, iRes, sRes] = await Promise.all([
+      fetch("/api/line/bindings", { cache: "no-store" }),
+      fetch("/api/line/send", { cache: "no-store" }),
+      fetch("/api/line/status", { cache: "no-store" }),
+    ]);
+    const b = (await bRes.json().catch(() => ({}))) as { items?: LineBinding[] };
+    const i = (await iRes.json().catch(() => ({}))) as { items?: LineInboxItem[] };
+    const s = (await sRes.json().catch(() => ({}))) as {
+      configured?: boolean;
+      userLinked?: boolean;
+      userLinkedName?: string | null;
+      webhookUrl?: string;
+    };
+    setBindings(b.items ?? []);
+    setInbox(i.items ?? []);
+    setStatus({
+      configured: Boolean(s.configured),
+      userLinked: Boolean(s.userLinked),
+      userLinkedName: s.userLinkedName ?? null,
+      webhookUrl: s.webhookUrl ?? "",
+    });
+    const mine = (b.items ?? []).find((x) => x.channelId === channelId);
+    setTarget((prev) => prev || mine?.targetId || (b.items ?? [])[0]?.targetId || "");
+  }, [channelId]);
+
+  React.useEffect(() => { void load(); }, [load]);
+
+  const send = async () => {
+    const value = text.trim();
+    if (!value) return toast("พิมพ์ข้อความก่อนนะครับ", "err");
+    if (!target && !status?.userLinked) return toast("เลือกปลายทาง LINE หรือผูก LINE ของคุณก่อน", "err");
+    setBusy(true);
+    try {
+      const res = await fetch("/api/line/send", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ channelId, to: target || undefined, text: value }),
+      });
+      const body = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string; hint?: string };
+      if (!res.ok || !body.ok) throw new Error([body.error, body.hint].filter(Boolean).join(" — ") || "ส่งไม่สำเร็จ");
+      toast("ส่งเข้า LINE แล้ว", "ok");
+      setText("");
+      await load();
+    } catch (err) {
+      toast((err as Error).message, "err");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const bind = async () => {
+    const id = newTarget.trim();
+    if (!id) return toast("วาง groupId / userId ของ LINE ก่อน", "err");
+    setBusy(true);
+    try {
+      const res = await fetch("/api/line/bindings", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          channelId,
+          targetId: id,
+          targetType: id.startsWith("C") ? "group" : id.startsWith("R") ? "room" : "user",
+          label: newLabel.trim() || undefined,
+        }),
+      });
+      const body = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
+      if (!res.ok || !body.ok) throw new Error(body.error || "ผูกกลุ่มไม่สำเร็จ");
+      toast(`ผูก ${channelName} กับ LINE แล้ว`, "ok");
+      setNewTarget("");
+      setNewLabel("");
+      setTarget(id);
+      await load();
+    } catch (err) {
+      toast((err as Error).message, "err");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const unbind = async (id: string) => {
+    if (!window.confirm("ยกเลิกการผูก LINE นี้?")) return;
+    await fetch(`/api/line/bindings?id=${id}`, { method: "DELETE" });
+    toast("ยกเลิกการผูกแล้ว", "info");
+    await load();
+  };
+
+  return (
+    <Modal
+      title="ส่งเข้า LINE"
+      subtitle={`ส่งข้อความออกจาก ${channelName} ไปยังผู้ใช้หรือกลุ่ม LINE`}
+      icon={<MessageCircle size={16} />}
+      onClose={onClose}
+      footer={
+        <>
+          <button className="btn" onClick={onClose}>ปิด</button>
+          <button className="btn btn-primary" onClick={() => void send()} disabled={busy || !status?.configured}>
+            <Send size={13} /> ส่งเข้า LINE
+          </button>
+        </>
+      }
+    >
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        {!status?.configured && (
+          <div className="login-alert" style={{ margin: 0 }}>
+            <Zap size={13} />
+            <span>ยังไม่ได้ตั้งค่า LINE Official Account — Super Admin ตั้งค่าได้ที่ ตั้งค่า → Login &amp; เชื่อมต่อ</span>
+          </div>
+        )}
+
+        <label className="field">
+          <span className="label">ปลายทาง</span>
+          <select className="input" value={target} onChange={(e) => setTarget(e.target.value)}>
+            <option value="">
+              {status?.userLinked ? `LINE ของฉัน${status.userLinkedName ? ` (${status.userLinkedName})` : ""}` : "— เลือกกลุ่ม/ผู้รับ —"}
+            </option>
+            {bindings.map((b) => (
+              <option key={b.id} value={b.targetId}>
+                {b.targetType === "group" ? "กลุ่ม" : b.targetType === "room" ? "ห้อง" : "ผู้ใช้"} · {b.label || b.targetId}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        {bindings.length > 0 && (
+          <div className="side-card" style={{ fontSize: 11 }}>
+            <b><LinkIcon size={11} /> แชทที่ผูกกับ LINE แล้ว</b>
+            {bindings.map((b) => (
+              <div key={b.id} className="row" style={{ gap: 6, justifyContent: "space-between" }}>
+                <span>{b.label || b.targetId} <span className="tiny muted">({b.targetType})</span></span>
+                <button className="btn btn-sm" style={{ padding: "0 6px", height: 20 }} onClick={() => void unbind(b.id)}>
+                  <Unlink size={9} />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="grid-2" style={{ gap: 8 }}>
+          <label className="field">
+            <span className="label">ผูกกลุ่ม LINE ใหม่ (groupId / userId)</span>
+            <input className="input" value={newTarget} onChange={(e) => setNewTarget(e.target.value)} placeholder="Cxxxxxxxxxxxxxxxx" />
+          </label>
+          <label className="field">
+            <span className="label">ชื่อที่แสดง</span>
+            <input className="input" value={newLabel} onChange={(e) => setNewLabel(e.target.value)} placeholder="กลุ่ม AE ทีม" />
+          </label>
+        </div>
+        <div className="row" style={{ gap: 6 }}>
+          <button className="btn btn-sm" onClick={() => void bind()} disabled={busy}>
+            <LinkIcon size={11} /> ผูกกับแชทนี้
+          </button>
+          <span className="tiny muted">groupId ดูได้จากกล่องข้อความ LINE ด้านล่าง</span>
+        </div>
+
+        <label className="field">
+          <span className="label">ข้อความ</span>
+          <textarea
+            className="input"
+            rows={4}
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            placeholder="ข้อความที่จะส่งเข้า LINE…"
+          />
+        </label>
+
+        <div className="divider" />
+        <div className="row" style={{ gap: 6, justifyContent: "space-between" }}>
+          <b style={{ fontSize: 12 }}><Inbox size={12} /> กล่องข้อความ LINE ล่าสุด</b>
+          <button className="btn btn-sm" onClick={() => void load()}><RefreshLineIcon /> รีเฟรช</button>
+        </div>
+        <div className="side-card" style={{ fontSize: 11, maxHeight: 190, overflow: "auto", display: "flex", flexDirection: "column", gap: 4 }}>
+          {inbox.length === 0 && <span className="muted">ยังไม่มีข้อความ — webhook: {status?.webhookUrl || "—"}</span>}
+          {inbox.map((m) => (
+            <div key={m.id} className="row" style={{ gap: 6, alignItems: "flex-start" }}>
+              <span className="tiny muted" style={{ flex: "0 0 auto" }}>{relTime(m.at)}</span>
+              <span style={{ flex: 1 }}>
+                {m.profileName ? <b>{m.profileName}: </b> : null}
+                {m.summary || m.type}
+                {m.groupId && <span className="tiny muted"> · {m.groupId}</span>}
+              </span>
+              {m.groupId && (
+                <button className="btn btn-sm" style={{ padding: "0 6px", height: 20 }} onClick={() => { setNewTarget(m.groupId ?? ""); setNewLabel(m.profileName || ""); }}>
+                  ใช้
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+function RefreshLineIcon() {
+  return <RefreshCw size={10} />;
 }

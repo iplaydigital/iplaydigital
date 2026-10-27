@@ -12,11 +12,24 @@ export interface OAuthConfig {
   googleSecret: string;
   lineId: string;
   lineSecret: string;
+  /** LINE Official Account (Messaging API) — ใช้รับ/ส่งข้อความในแชท */
+  lineOaToken: string;
+  lineOaSecret: string;
+  lineBotId: string;
   /** URL สาธารณะของเว็บ ใช้สร้าง redirect_uri (เช่น https://workspace.playdigital.co.th) */
   publicUrl: string;
 }
 
-const EMPTY: OAuthConfig = { googleId: "", googleSecret: "", lineId: "", lineSecret: "", publicUrl: "" };
+const EMPTY: OAuthConfig = {
+  googleId: "",
+  googleSecret: "",
+  lineId: "",
+  lineSecret: "",
+  lineOaToken: "",
+  lineOaSecret: "",
+  lineBotId: "",
+  publicUrl: "",
+};
 const FILE = path.join(process.cwd(), ".data", "oauth.json");
 
 const g = globalThis as unknown as {
@@ -39,6 +52,9 @@ function fromEnv(): OAuthConfig {
     googleSecret: envValue("AUTH_GOOGLE_SECRET", "GOOGLE_CLIENT_SECRET"),
     lineId: envValue("AUTH_LINE_ID", "LINE_CHANNEL_ID"),
     lineSecret: envValue("AUTH_LINE_SECRET", "LINE_CHANNEL_SECRET"),
+    lineOaToken: envValue("LINE_OA_ACCESS_TOKEN", "LINE_CHANNEL_ACCESS_TOKEN"),
+    lineOaSecret: envValue("LINE_OA_CHANNEL_SECRET", "LINE_MESSAGING_CHANNEL_SECRET"),
+    lineBotId: envValue("LINE_OA_BOT_ID"),
     publicUrl: envValue("AUTH_URL", "NEXTAUTH_URL"),
   };
 }
@@ -115,6 +131,9 @@ export async function getOAuthConfig(): Promise<OAuthConfig> {
     googleSecret: stored.googleSecret || env.googleSecret,
     lineId: stored.lineId || env.lineId,
     lineSecret: stored.lineSecret || env.lineSecret,
+    lineOaToken: stored.lineOaToken || env.lineOaToken,
+    lineOaSecret: stored.lineOaSecret || env.lineOaSecret,
+    lineBotId: stored.lineBotId || env.lineBotId,
     publicUrl: stored.publicUrl || env.publicUrl,
   };
 }
@@ -156,8 +175,10 @@ export function superAdminEmails(): string[] {
 export interface OAuthPublicInfo {
   google: { clientId: string; secretSet: boolean; configured: boolean; source: "ui" | "env" | "none" };
   line: { clientId: string; secretSet: boolean; configured: boolean; source: "ui" | "env" | "none" };
+  lineOa: { tokenSet: boolean; secretSet: boolean; configured: boolean; botId: string; webhookUrl: string };
   publicUrl: string;
   redirects: { google: string; line: string };
+  webhook: string;
   allowlist: string;
   superAdmins: string[];
 }
@@ -185,12 +206,20 @@ export async function oauthPublicInfo(): Promise<OAuthPublicInfo> {
       configured: Boolean(merged.lineId && merged.lineSecret),
       source: stored.lineId || stored.lineSecret ? "ui" : env.lineId || env.lineSecret ? "env" : "none",
     },
+    lineOa: {
+      tokenSet: Boolean(merged.lineOaToken),
+      secretSet: Boolean(merged.lineOaSecret),
+      configured: Boolean(merged.lineOaToken && merged.lineOaSecret),
+      botId: merged.lineBotId,
+      webhookUrl: `${origin || "https://<โดเมนของคุณ>"}/api/line/webhook`,
+    },
     publicUrl: origin,
+    webhook: `${origin || "https://<โดเมนของคุณ>"}/api/line/webhook`,
     redirects: {
       google: `${origin || "https://<โดเมนของคุณ>"}/api/auth/google/callback`,
       line: `${origin || "https://<โดเมนของคุณ>"}/api/auth/line/callback`,
     },
-    allowlist: process.env.ALLOWED_EMAIL_DOMAIN || "playdigital.co.th",
+    allowlist: process.env.ALLOWED_EMAIL_DOMAIN || "playdigital.co.th,gmail.com",
     superAdmins: superAdminEmails(),
   };
 }
