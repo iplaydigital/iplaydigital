@@ -212,6 +212,7 @@ export function StaffView() {
                         <span className="pill" style={{ background: ROLE_META[u.role].soft, color: ROLE_META[u.role].color }}>
                           {ROLE_META[u.role].short}
                         </span>
+                        {u.isSuper && <span className="super-badge" style={{ marginLeft: 4 }}><ShieldCheck size={9} /> SUPER</span>}
                       </td>
                       <td>
                         <span className="pill" style={{ background: u.active ? "rgba(34,199,147,.14)" : "var(--red-soft)", color: u.active ? "#149C74" : "#C9304F" }}>
@@ -350,7 +351,7 @@ function StaffDrawer({
                 <KV label="ทีม" value={team?.name ?? "ไม่มีทีม"} />
                 <KV label="ตำแหน่ง" value={user.jobTitle || user.position || "—"} />
                 <KV label="ระดับ" value={user.level || "—"} />
-                <KV label="สิทธิ์" value={ROLE_META[user.role].label} />
+                <KV label="สิทธิ์" value={user.isSuper ? "Super Admin (ทุกสิทธิ์)" : ROLE_META[user.role].label} />
                 <KV label="วิธีเข้าใช้" value={user.provider === "password" ? "อีเมล/รหัสผ่าน" : user.provider === "google" ? "Google" : "LINE"} />
                 <KV label="สถานะ" value={user.active ? "ใช้งาน" : "ระงับ"} />
                 <KV label="เข้าใช้ล่าสุด" value={user.lastLoginAt ? `${thaiDate(user.lastLoginAt.slice(0, 10), { short: true })} ${thaiTime(user.lastLoginAt)}` : "ยังไม่เคยเข้า"} />

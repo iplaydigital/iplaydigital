@@ -2,20 +2,22 @@ import { requestMeta, setSessionCookie } from "../../../../../lib/auth";
 import { writeAudit, writeLogin } from "../../../../../lib/audit";
 import { clearStateCookie, loginError, readState, requestOrigin } from "../../../../../lib/oauth";
 import { ensureSeedUsers, isAllowedEmail, upsertOAuthUser } from "../../../../../lib/users";
+import { getOAuthConfig } from "../../../../../lib/oauth-config";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
-  const origin = requestOrigin(req);
+  const cfg = await getOAuthConfig();
+  const origin = cfg.publicUrl || requestOrigin(req);
   const code = url.searchParams.get("code");
   const state = url.searchParams.get("state");
 
   if (!code || !state || state !== readState(req)) return loginError(origin, "google_state");
   if (url.searchParams.get("error")) return loginError(origin, "google_cancelled");
 
-  const clientId = process.env.AUTH_GOOGLE_ID || process.env.GOOGLE_CLIENT_ID;
-  const clientSecret = process.env.AUTH_GOOGLE_SECRET || process.env.GOOGLE_CLIENT_SECRET;
+  const clientId = cfg.googleId;
+  const clientSecret = cfg.googleSecret;
   if (!clientId || !clientSecret) return loginError(origin, "google_not_configured");
 
   try {

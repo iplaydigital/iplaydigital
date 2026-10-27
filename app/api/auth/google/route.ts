@@ -1,10 +1,12 @@
 import { newState, requestOrigin, stateCookie } from "../../../../lib/oauth";
+import { getOAuthConfig } from "../../../../lib/oauth-config";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {
-  const origin = requestOrigin(req);
-  const clientId = process.env.AUTH_GOOGLE_ID || process.env.GOOGLE_CLIENT_ID;
+  const cfg = await getOAuthConfig();
+  const origin = cfg.publicUrl || requestOrigin(req);
+  const clientId = cfg.googleId;
   if (!clientId) {
     return new Response(null, { status: 302, headers: { location: `${origin}/login?error=google_not_configured` } });
   }

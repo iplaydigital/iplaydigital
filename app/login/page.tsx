@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getSessionUser } from "../../lib/auth";
 import { ensureSeedUsers } from "../../lib/users";
+import { getOAuthConfig } from "../../lib/oauth-config";
 import { LoginForm } from "../../components/login-form";
 
 export const dynamic = "force-dynamic";
@@ -10,8 +11,9 @@ export default async function LoginPage() {
   if (user) redirect("/");
   await ensureSeedUsers();
 
-  const googleReady = !!(process.env.AUTH_GOOGLE_ID || process.env.GOOGLE_CLIENT_ID);
-  const lineReady = !!(process.env.AUTH_LINE_ID || process.env.LINE_CHANNEL_ID);
+  const cfg = await getOAuthConfig();
+  const googleReady = Boolean(cfg.googleId && cfg.googleSecret);
+  const lineReady = Boolean(cfg.lineId && cfg.lineSecret);
 
   return (
     <main className="login-wrap">

@@ -7,6 +7,7 @@ import { cookies } from "next/headers";
 import type { SessionUser, UserRole } from "./types";
 import { getUserById, toClient, type User } from "./users";
 import { canAccess, roleScope, type ModuleKey } from "./rbac";
+import { isSuperAdmin } from "./oauth-config";
 
 export const COOKIE = "ipw_session";
 const MAX_AGE = 60 * 60 * 24 * 7; // 7 วัน
@@ -66,7 +67,8 @@ export async function getSessionUser(): Promise<SessionUser | null> {
   if (!data) return null;
   const user = await getUserById(data.uid);
   if (!user || !user.active) return null;
-  return toClient(user);
+  const client = toClient(user);
+  return { ...client, isSuper: isSuperAdmin(client) };
 }
 
 /** ผู้ดูแลระบบ (ตั้งค่า/จัดการบัญชีขั้นสูง) = Admin หรือ Support */
@@ -139,6 +141,16 @@ export async function requireStaffManager(): Promise<{ user: SessionUser | null;
   if (error) return { user, error };
   if (!roleScope(user?.role).manageStaff) {
     return { user, error: json({ error: "ต้องมีสิทธิ์จัดการพนักงาน" }, 403) };
+  }
+  return { user };
+}
+
+/** ต้องเป็น Super Admin (it@ / jimm@ ตาม SUPER_ADMIN_EMAILS) */
+export async function requireSuperAdmin(): Promise<{ user: SessionUser | null; error?: Response }> {
+  const { user, error } = await requireUser();
+  if (error) return { user, error };
+  if (!isSuperAdmin(user)) {
+    return { user, error: json({ error: "เฉพาะ Super Admin เท่านั้น" }, 403) };
   }
   return { user };
 }

@@ -2,8 +2,9 @@
 
 import React, { useCallback, useEffect, useState } from "react";
 import {
-  BadgeCheck, Bot, Building2, Cloud, CloudUpload, Database, Download, HardDrive, KeyRound,
-  Loader2, Lock, MapPin, Pencil, Plus, RefreshCw, Save, ShieldCheck, Trash2, UserCog, UserPlus, Users,
+  BadgeCheck, Bot, Building2, Check, Cloud, CloudUpload, Copy, Database, Download, ExternalLink,
+  HardDrive, KeyRound, Loader2, Lock, MapPin, Pencil, Plus, RefreshCw, Save, ShieldCheck, Trash2,
+  UserCog, UserPlus, Users, Zap,
 } from "lucide-react";
 import { useApp } from "./providers";
 import { Modal } from "./ui";
@@ -12,11 +13,12 @@ import { cls, textOn, thaiDate } from "../lib/utils";
 import { canAccess } from "../lib/rbac";
 import type { SessionUser, UserRole } from "../lib/types";
 
-type Tab = "org" | "staff" | "reports" | "connect" | "data";
+type Tab = "org" | "reports" | "login" | "connect" | "data";
 
-const TABS: { key: Tab; label: string; icon: React.ReactNode; managerOnly?: boolean }[] = [
+const TABS: { key: Tab; label: string; icon: React.ReactNode; superOnly?: boolean }[] = [
   { key: "org", label: "องค์กร", icon: <Building2 size={13} /> },
   { key: "reports", label: "รายงาน & Drive", icon: <CloudUpload size={13} /> },
+  { key: "login", label: "Login & เชื่อมต่อ", icon: <KeyRound size={13} />, superOnly: true },
   { key: "connect", label: "การเชื่อมต่อ & AI", icon: <Cloud size={13} /> },
   { key: "data", label: "ข้อมูล & ความปลอดภัย", icon: <Database size={13} /> },
 ];
@@ -59,15 +61,17 @@ export function SettingsView() {
   return (
     <div className="page">
       <div className="tabs settings-tabs">
-        {TABS.map((t) => (
+        {TABS.filter((t) => !t.superOnly || me.isSuper).map((t) => (
           <button key={t.key} className={cls(tab === t.key && "on")} onClick={() => setTab(t.key)}>
             {t.icon} {t.label}
+            {t.superOnly && <span className="super-tag">SUPER</span>}
           </button>
         ))}
       </div>
 
       {tab === "org" && <OrgTab />}
       {tab === "reports" && <ReportsTab />}
+      {tab === "login" && me.isSuper && <LoginTab />}
       {tab === "connect" && <ConnectTab />}
       {tab === "data" && <DataTab />}
     </div>
@@ -385,6 +389,230 @@ function DataTab() {
           <p style={{ fontSize: 12.5, lineHeight: 1.6 }}>ระบบจะล้างงาน อีเวนต์ แชท ไฟล์ การลา และ AI run ทั้งหมด แล้วสร้างข้อมูลตัวอย่างชุดใหม่ (seed) ให้อัตโนมัติ</p>
         </Modal>
       )}
+    </>
+  );
+}
+
+// ── Login & เชื่อมต่อ (Super Admin เท่านั้น) ─────────────────
+interface OAuthInfo {
+  google: { clientId: string; secretSet: boolean; configured: boolean; source: "ui" | "env" | "none" };
+  line: { clientId: string; secretSet: boolean; configured: boolean; source: "ui" | "env" | "none" };
+  publicUrl: string;
+  redirects: { google: string; line: string };
+  allowlist: string;
+  superAdmins: string[];
+}
+
+function LoginTab() {
+  const { toast } = useApp();
+  const [info, setInfo] = useState<OAuthInfo | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState({ googleId: "", googleSecret: "", lineId: "", lineSecret: "", publicUrl: "" });
+  const [showSecret, setShowSecret] = useState(false);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/settings/oauth", { cache: "no-store" });
+      const body = (await res.json().catch(() => ({}))) as OAuthInfo & { error?: string };
+      if (!res.ok) throw new Error(body.error || "โหลดการตั้งค่าไม่สำเร็จ");
+      setInfo(body);
+      setForm({
+        googleId: body.google.clientId ?? "",
+        googleSecret: "",
+        lineId: body.line.clientId ?? "",
+        lineSecret: "",
+        publicUrl: body.publicUrl ?? "",
+      });
+    } catch (err) {
+      toast((err as Error).message, "err");
+    } finally {
+      setLoading(false);
+    }
+  }, [toast]);
+
+  useEffect(() => { void load(); }, [load]);
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      const payload: Record<string, string> = {
+        googleId: form.googleId,
+        lineId: form.lineId,
+        publicUrl: form.publicUrl,
+      };
+      // ส่ง secret เฉพาะเมื่อพิมพ์ใหม่ (ช่องว่าง = คงค่าเดิม)
+      if (form.googleSecret) payload.googleSecret = form.googleSecret;
+      if (form.lineSecret) payload.lineSecret = form.lineSecret;
+
+      const res = await fetch("/api/settings/oauth", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const body = (await res.json().catch(() => ({}))) as OAuthInfo & { error?: string };
+      if (!res.ok) throw new Error(body.error || "บันทึกไม่สำเร็จ");
+      setInfo(body);
+      setForm((f) => ({ ...f, googleSecret: "", lineSecret: "" }));
+      toast("บันทึกการเชื่อมต่อ Login แล้ว — ใช้งานได้ทันที", "ok");
+    } catch (err) {
+      toast((err as Error).message, "err");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const clearSecret = async (which: "google" | "line") => {
+    if (!window.confirm(`ล้าง ${which === "google" ? "Google" : "LINE"} Client Secret?`)) return;
+    try {
+      const res = await fetch("/api/settings/oauth", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(which === "google" ? { googleSecret: "" } : { lineSecret: "" }),
+      });
+      const body = (await res.json().catch(() => ({}))) as OAuthInfo & { error?: string };
+      if (!res.ok) throw new Error(body.error || "ล้างค่าไม่สำเร็จ");
+      setInfo(body);
+      toast("ล้างค่าแล้ว (ระบบจะใช้ค่าจาก .env ถ้ามี)", "info");
+    } catch (err) {
+      toast((err as Error).message, "err");
+    }
+  };
+
+  const copy = async (text: string, label: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast(`คัดลอก ${label} แล้ว`, "ok");
+    } catch {
+      toast("คัดลอกไม่สำเร็จ — เลือกข้อความแล้วกด Ctrl+C", "err");
+    }
+  };
+
+  const sourceLabel = (s: "ui" | "env" | "none") => (s === "ui" ? "ตั้งในหน้านี้" : s === "env" ? "จาก .env" : "ยังไม่ตั้งค่า");
+
+  return (
+    <>
+      <div className="card">
+        <div className="card-head">
+          <div className="card-title">
+            <KeyRound size={14} /> เชื่อมต่อ Google Workspace / Gmail และ LINE Login
+            <span className="super-tag">SUPER ADMIN</span>
+          </div>
+          <button className="btn btn-sm" onClick={() => void load()}><RefreshCw size={11} /> รีเฟรช</button>
+        </div>
+        <div className="card-body" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <div className="side-card" style={{ fontSize: 11 }}>
+            <b><ShieldCheck size={12} /> ค่าที่บันทึกในหน้านี้จะถูกใช้ทันที</b>
+            <div>ไม่ต้องแก้ไฟล์ .env หรือ restart เซิร์ฟเวอร์ · ค่าที่ตั้งในหน้านี้จะชนะค่าใน .env</div>
+            <div>Secret ถูกเก็บแบบไม่แสดงผล (แสดงเฉพาะว่าตั้งค่าแล้ว) และทุกการแก้ไขถูกบันทึกในประวัติ</div>
+          </div>
+
+          {loading && <div className="row muted" style={{ gap: 8 }}><Loader2 size={14} className="spin" /> กำลังโหลดการตั้งค่า…</div>}
+
+          {!loading && info && (
+            <>
+              <div className="login-state-grid">
+                <div className={cls("login-state", info.google.configured && "on")}>
+                  <div className="ls-head">
+                    <b>Google / Gmail</b>
+                    <span className={cls("pill", info.google.configured ? "ok" : "warn")}>
+                      {info.google.configured ? <><Check size={9} /> พร้อมใช้งาน</> : "ยังไม่พร้อม"}
+                    </span>
+                  </div>
+                  <div className="tiny muted">Client ID: {info.google.clientId || "—"}</div>
+                  <div className="tiny muted">Secret: {info.google.secretSet ? "ตั้งค่าแล้ว" : "ยังไม่มี"} · {sourceLabel(info.google.source)}</div>
+                </div>
+                <div className={cls("login-state", info.line.configured && "on")}>
+                  <div className="ls-head">
+                    <b>LINE Login</b>
+                    <span className={cls("pill", info.line.configured ? "ok" : "warn")}>
+                      {info.line.configured ? <><Check size={9} /> พร้อมใช้งาน</> : "ยังไม่พร้อม"}
+                    </span>
+                  </div>
+                  <div className="tiny muted">Channel ID: {info.line.clientId || "—"}</div>
+                  <div className="tiny muted">Channel Secret: {info.line.secretSet ? "ตั้งค่าแล้ว" : "ยังไม่มี"} · {sourceLabel(info.line.source)}</div>
+                </div>
+              </div>
+
+              <div className="grid-2" style={{ gap: 10 }}>
+                <label className="field">
+                  <span className="label">Google Client ID</span>
+                  <input className="input" value={form.googleId} onChange={(e) => setForm({ ...form, googleId: e.target.value })} placeholder="xxxxx.apps.googleusercontent.com" />
+                </label>
+                <label className="field">
+                  <span className="label">Google Client Secret</span>
+                  <input className="input" type={showSecret ? "text" : "password"} value={form.googleSecret} onChange={(e) => setForm({ ...form, googleSecret: e.target.value })} placeholder={info.google.secretSet ? "•••••••• (เว้นว่าง = คงค่าเดิม)" : "GOCSPX-…"} />
+                </label>
+                <label className="field">
+                  <span className="label">LINE Channel ID</span>
+                  <input className="input" value={form.lineId} onChange={(e) => setForm({ ...form, lineId: e.target.value })} placeholder="2006xxxxxx" />
+                </label>
+                <label className="field">
+                  <span className="label">LINE Channel Secret</span>
+                  <input className="input" type={showSecret ? "text" : "password"} value={form.lineSecret} onChange={(e) => setForm({ ...form, lineSecret: e.target.value })} placeholder={info.line.secretSet ? "•••••••• (เว้นว่าง = คงค่าเดิม)" : "channel secret"} />
+                </label>
+                <label className="field" style={{ gridColumn: "span 2" }}>
+                  <span className="label">URL สาธารณะของระบบ (ใช้สร้าง redirect URI)</span>
+                  <input className="input" value={form.publicUrl} onChange={(e) => setForm({ ...form, publicUrl: e.target.value })} placeholder="https://workspace.playdigital.co.th" />
+                </label>
+              </div>
+
+              <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
+                <button className="btn btn-primary btn-sm" onClick={() => void save()} disabled={saving}>
+                  {saving ? <><Loader2 size={12} className="spin" /> กำลังบันทึก…</> : <><Save size={12} /> บันทึกการเชื่อมต่อ</>}
+                </button>
+                <button className="btn btn-sm" onClick={() => setShowSecret(!showSecret)}>
+                  {showSecret ? "ซ่อน" : "แสดง"}ช่อง secret
+                </button>
+                <button className="btn btn-sm" style={{ color: "var(--red)" }} onClick={() => void clearSecret("google")}>ล้าง Google Secret</button>
+                <button className="btn btn-sm" style={{ color: "var(--red)" }} onClick={() => void clearSecret("line")}>ล้าง LINE Secret</button>
+              </div>
+
+              <div className="divider" />
+
+              <b style={{ fontSize: 12 }}><ExternalLink size={12} /> Redirect URI ที่ต้องนำไปใส่ในผู้ให้บริการ</b>
+              <div className="redirect-row">
+                <span className="tiny muted" style={{ width: 64 }}>Google</span>
+                <code className="code-chip" style={{ flex: 1, overflow: "auto" }}>{info.redirects.google}</code>
+                <button className="btn btn-sm" onClick={() => void copy(info.redirects.google, "Google redirect URI")}><Copy size={11} /> คัดลอก</button>
+              </div>
+              <div className="redirect-row">
+                <span className="tiny muted" style={{ width: 64 }}>LINE</span>
+                <code className="code-chip" style={{ flex: 1, overflow: "auto" }}>{info.redirects.line}</code>
+                <button className="btn btn-sm" onClick={() => void copy(info.redirects.line, "LINE redirect URI")}><Copy size={11} /> คัดลอก</button>
+              </div>
+
+              <div className="grid-2" style={{ gap: 10 }}>
+                <div className="side-card" style={{ fontSize: 11 }}>
+                  <b><Zap size={12} /> ขั้นตอน Google (5 นาที)</b>
+                  <div>1. Google Cloud Console → APIs & Services → Credentials</div>
+                  <div>2. Create credentials → OAuth client ID → Web application</div>
+                  <div>3. ใส่ Authorized redirect URI ตามด้านบน (ทั้ง dev และ production)</div>
+                  <div>4. OAuth consent screen → เพิ่ม scope <code>email</code>, <code>profile</code>, <code>openid</code></div>
+                  <div>5. คัดลอก Client ID / Secret มาวางในหน้านี้ แล้วกดบันทึก</div>
+                  <a className="link-btn" href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noreferrer">เปิด Google Cloud Console</a>
+                </div>
+                <div className="side-card" style={{ fontSize: 11 }}>
+                  <b><Zap size={12} /> ขั้นตอน LINE (5 นาที)</b>
+                  <div>1. LINE Developers Console → สร้าง Provider → สร้าง Channel ชนิด <b>LINE Login</b></div>
+                  <div>2. เปิด scopes: <code>profile</code>, <code>openid</code>, <code>email</code></div>
+                  <div>3. ใส่ Callback URL ตามด้านบน (ต้องตรงทุกตัวอักษร)</div>
+                  <div>4. คัดลอก Channel ID / Channel Secret มาวางในหน้านี้</div>
+                  <div>5. ยื่นขอสิทธิ์ Email address (ถ้าต้องการอีเมลจริงจาก LINE)</div>
+                  <a className="link-btn" href="https://developers.line.biz/console/" target="_blank" rel="noreferrer">เปิด LINE Developers</a>
+                </div>
+              </div>
+
+              <div className="side-card" style={{ fontSize: 11 }}>
+                <b><Users size={12} /> Super Admin</b>
+                <div>{info.superAdmins.join(" · ")}</div>
+                <div className="tiny muted">โดเมนที่อนุญาตให้เข้าใช้: <b>{info.allowlist}</b> · ตั้งค่าได้ที่ <code>ALLOWED_EMAIL_DOMAIN</code></div>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
     </>
   );
 }

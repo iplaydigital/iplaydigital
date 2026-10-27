@@ -1,10 +1,12 @@
 import { newState, requestOrigin, stateCookie } from "../../../../lib/oauth";
+import { getOAuthConfig } from "../../../../lib/oauth-config";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {
-  const origin = requestOrigin(req);
-  const clientId = process.env.AUTH_LINE_ID || process.env.LINE_CHANNEL_ID;
+  const cfg = await getOAuthConfig();
+  const origin = cfg.publicUrl || requestOrigin(req);
+  const clientId = cfg.lineId;
   if (!clientId) {
     return new Response(null, { status: 302, headers: { location: `${origin}/login?error=line_not_configured` } });
   }

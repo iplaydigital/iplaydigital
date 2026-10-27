@@ -392,6 +392,15 @@ MIT © iPlay Digital
    - **Google Workspace / Gmail** (`AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET`)
    - **LINE** (`AUTH_LINE_ID` / `AUTH_LINE_SECRET`, ต้องเปิด scope `profile openid email`)
 
+### Super Admin (ทำได้ทุกอย่าง)
+บัญชี **Super Admin** ถูกกำหนดด้วย `SUPER_ADMIN_EMAILS` (ค่าเริ่มต้น `it@playdigital.co.th,jimm@playdigital.co.th`)
+- สิทธิ์ `admin` เต็ม + เห็นเมนู **ตั้งค่า → Login & เชื่อมต่อ** (แท็บ SUPER) สำหรับตั้งค่า Google/LINE ได้จากหน้าเว็บ
+- รหัสผ่านเริ่มต้น **`admin123`** (แก้ได้ด้วย `SUPER_ADMIN_PASSWORD` หรือคำสั่งด้านล่าง)
+```bash
+npm run super:setup            # สร้าง/ปรับสิทธิ์ Super Admin ตามรายการ
+npm run super:setup -- --force # ตั้งรหัสผ่านใหม่ให้ทุกคนในรายการ
+```
+
 ### บัญชีเริ่มต้น (seed)
 | อีเมล | สิทธิ์ | ใช้ทำอะไร |
 |---|---|---|
@@ -445,6 +454,16 @@ npm run db:migrate           # สร้าง/อัปเกรดตารา
 - session เป็น **HMAC-SHA256 signed cookie** (`ipw_session`, HttpOnly, SameSite=Lax, 7 วัน, `Secure` ใน production)
 - ตรวจโดเมนอีเมลจาก `ALLOWED_EMAIL_DOMAIN` ทั้งตอนล็อกอินปกติและ OAuth
 - ระงับบัญชี (`active = 0`) = ตัด session ทันทีในคำขอถัดไป
+
+## 🔑 ตั้งค่า Google / LINE Login จากหน้า Super Admin
+`ตั้งค่า → Login & เชื่อมต่อ` (เห็นเฉพาะ Super Admin)
+1. ใส่ **Google Client ID / Secret** และ **LINE Channel ID / Secret**
+2. ใส่ **URL สาธารณะของระบบ** (ใช้สร้าง redirect URI อัตโนมัติ)
+3. คัดลอก redirect URI ที่หน้าเว็บแสดง ไปวางใน Google Cloud Console / LINE Developers
+4. กด **บันทึก** — มีผลทันที ไม่ต้องแก้ `.env` หรือ restart
+
+> ค่าที่บันทึกในหน้านี้จะชนะค่าใน `.env` · Secret ถูกบันทึกแบบไม่แสดงผล · ทุกการแก้ไขอยู่ใน audit log
+> เก็บในตาราง `ws_oauth` (MariaDB) หรือ `.data/oauth.json` เมื่อ DB ไม่พร้อม
 
 ## 📄 รายงาน + Google Drive
 - เมนู **รายงาน & Drive**: สร้าง/แก้ไข/อนุมัติ/ลบรายงาน (รหัส `RPT-xxxx`), งวดเดือน, โปรเจกต์, สรุป, ไฟล์แนบ
