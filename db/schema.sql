@@ -245,6 +245,17 @@ CREATE TABLE IF NOT EXISTS ws_users (
   active        TINYINT(1)   NOT NULL DEFAULT 1,
   position      VARCHAR(120) NOT NULL DEFAULT '',
   member_id     VARCHAR(32)  NULL,
+  -- ช่องทางที่ผูกไว้ (Google / LINE) + Google Drive ของผู้ใช้เอง
+  google_sub          VARCHAR(120) NULL,
+  google_email        VARCHAR(190) NULL,
+  google_connected_at VARCHAR(32)  NULL,
+  line_user_id        VARCHAR(64)  NULL,
+  line_display        VARCHAR(160) NULL,
+  line_picture        TEXT         NULL,
+  line_linked_at      VARCHAR(32)  NULL,
+  drive_refresh_token TEXT         NULL,
+  drive_email         VARCHAR(190) NULL,
+  drive_connected_at  VARCHAR(32)  NULL,
   created_at    VARCHAR(32)  NOT NULL,
   last_login_at VARCHAR(32)  NULL,
   KEY idx_ws_users_role (role)

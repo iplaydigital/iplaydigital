@@ -9,10 +9,23 @@ import crypto from "crypto";
 import type { AuthProvider, SessionUser, UserRole } from "./types";
 import { writeAudit, writeAuditDiff } from "./audit";
 import { superAdminEmails } from "./oauth-config";
+import { allowedDomains, isAllowedEmail } from "./identity";
 
 export interface User extends SessionUser {
   passwordHash?: string | null;
   phone?: string;
+  // ── บัญชีที่เชื่อมต่อ (ไม่ส่งความลับออกฝั่ง client) ──
+  googleSub?: string | null;
+  googleEmail?: string | null;
+  googleConnectedAt?: string | null;
+  lineUserId?: string | null;
+  lineDisplay?: string | null;
+  linePicture?: string | null;
+  lineLinkedAt?: string | null;
+  /** refresh token ของ Google Drive (ของผู้ใช้เอง) — ห้ามส่งออก client */
+  driveRefreshToken?: string | null;
+  driveEmail?: string | null;
+  driveConnectedAt?: string | null;
 }
 
 const FILE = path.join(process.cwd(), ".data", "users.json");
@@ -76,6 +89,16 @@ async function ensureUsersTable() {
     "ALTER TABLE ws_users ADD COLUMN level VARCHAR(24) NOT NULL DEFAULT ''",
     "ALTER TABLE ws_users ADD COLUMN extra_modules TEXT NULL",
     "ALTER TABLE ws_users ADD COLUMN updated_at VARCHAR(32) NULL",
+    "ALTER TABLE ws_users ADD COLUMN google_sub VARCHAR(120) NULL",
+    "ALTER TABLE ws_users ADD COLUMN google_email VARCHAR(190) NULL",
+    "ALTER TABLE ws_users ADD COLUMN google_connected_at VARCHAR(32) NULL",
+    "ALTER TABLE ws_users ADD COLUMN line_user_id VARCHAR(64) NULL",
+    "ALTER TABLE ws_users ADD COLUMN line_display VARCHAR(120) NULL",
+    "ALTER TABLE ws_users ADD COLUMN line_picture TEXT NULL",
+    "ALTER TABLE ws_users ADD COLUMN line_linked_at VARCHAR(32) NULL",
+    "ALTER TABLE ws_users ADD COLUMN drive_refresh_token TEXT NULL",
+    "ALTER TABLE ws_users ADD COLUMN drive_email VARCHAR(190) NULL",
+    "ALTER TABLE ws_users ADD COLUMN drive_connected_at VARCHAR(32) NULL",
   ];
   for (const sql of alters) {
     try {
@@ -120,17 +143,7 @@ export function normEmail(email: string) {
   return (email || "").trim().toLowerCase();
 }
 
-export function allowedDomains(): string[] {
-  const raw = process.env.ALLOWED_EMAIL_DOMAIN || "playdigital.co.th";
-  return raw.split(",").map((d) => d.trim().toLowerCase().replace(/^@/, "")).filter(Boolean);
-}
-
-export function isAllowedEmail(email: string) {
-  const e = normEmail(email);
-  if (!e.includes("@")) return false;
-  const domain = e.split("@")[1];
-  return allowedDomains().some((d) => domain === d || domain.endsWith("." + d));
-}
+export { allowedDomains, isAllowedEmail } from "./identity";
 
 const PALETTE = ["#7100DD", "#3BA7FF", "#22C793", "#FF6B9D", "#FF9A5A", "#8E7CF3", "#D98A00", "#14C4B2"];
 
@@ -163,8 +176,24 @@ export function verifyPassword(pw: string, stored?: string | null) {
 }
 
 export function toClient(u: User): SessionUser {
-  const { passwordHash: _pw, phone: _phone, ...rest } = u;
-  return { ...rest, isSuper: u.role === "admin" && superAdminEmails().includes(u.email.toLowerCase()) };
+  const {
+    passwordHash: _pw, phone: _phone, googleSub: _gs, driveRefreshToken: _dt, ...rest
+  } = u;
+  const hasLine = Boolean(u.lineUserId);
+  const hasGoogle = Boolean(u.googleEmail || u.googleConnectedAt);
+  return {
+    ...rest,
+    isSuper: u.role === "admin" && superAdminEmails().includes(u.email.toLowerCase()),
+    linked: {
+      google: hasGoogle,
+      googleEmail: u.googleEmail || null,
+      line: hasLine,
+      lineName: u.lineDisplay || null,
+      linePicture: u.linePicture || null,
+      drive: Boolean(u.driveRefreshToken || u.driveConnectedAt),
+      driveEmail: u.driveEmail || null,
+    },
+  };
 }
 
 /** รหัสผ่าน Super Admin (ค่าเริ่มต้น admin123) */
@@ -365,12 +394,32 @@ function rowToUser(r: Record<string, unknown>): User {
     createdAt: String(r.created_at ?? new Date().toISOString()),
     updatedAt: (r.updated_at as string | null) ?? null,
     lastLoginAt: (r.last_login_at as string | null) ?? null,
+    googleSub: (r.google_sub as string | null) ?? null,
+    googleEmail: (r.google_email as string | null) ?? null,
+    googleConnectedAt: (r.google_connected_at as string | null) ?? null,
+    lineUserId: (r.line_user_id as string | null) ?? null,
+    lineDisplay: (r.line_display as string | null) ?? null,
+    linePicture: (r.line_picture as string | null) ?? null,
+    lineLinkedAt: (r.line_linked_at as string | null) ?? null,
+    driveRefreshToken: (r.drive_refresh_token as string | null) ?? null,
+    driveEmail: (r.drive_email as string | null) ?? null,
+    driveConnectedAt: (r.drive_connected_at as string | null) ?? null,
   };
 }
 
 export async function getUserById(id: string): Promise<User | null> {
   const all = await listUsers();
   return all.find((u) => u.id === id) ?? null;
+}
+
+export async function getUserByLineId(lineUserId: string): Promise<User | null> {
+  const all = await listUsers();
+  return all.find((u) => u.lineUserId === lineUserId) ?? null;
+}
+
+export async function getUserByGoogleSub(sub: string): Promise<User | null> {
+  const all = await listUsers();
+  return all.find((u) => u.googleSub === sub) ?? null;
 }
 
 export async function getUserByEmail(email: string): Promise<User | null> {
@@ -445,12 +494,18 @@ export async function updateUser(
       const p = await db();
       await p.query(
         `UPDATE ws_users SET email=?, name=?, nickname=?, role=?, provider=?, password_hash=?, color=?, initials=?,
-           active=?, position=?, job_title=?, level=?, dept_id=?, team_id=?, extra_modules=?, member_id=?, updated_at=?, last_login_at=?
+           active=?, position=?, job_title=?, level=?, dept_id=?, team_id=?, extra_modules=?, member_id=?, updated_at=?, last_login_at=?,
+           google_sub=?, google_email=?, google_connected_at=?, line_user_id=?, line_display=?, line_picture=?, line_linked_at=?,
+           drive_refresh_token=?, drive_email=?, drive_connected_at=?
          WHERE id=?`,
         [next.email, next.name, next.nickname, next.role, next.provider, next.passwordHash ?? null, next.color,
           next.initials, next.active ? 1 : 0, next.position ?? "", next.jobTitle ?? "", next.level ?? "",
           next.departmentId ?? null, next.teamId ?? null, JSON.stringify(next.extraModules ?? []),
-          next.memberId ?? null, next.updatedAt ?? null, next.lastLoginAt ?? null, next.id],
+          next.memberId ?? null, next.updatedAt ?? null, next.lastLoginAt ?? null,
+          next.googleSub ?? null, next.googleEmail ?? null, next.googleConnectedAt ?? null,
+          next.lineUserId ?? null, next.lineDisplay ?? null, next.linePicture ?? null, next.lineLinkedAt ?? null,
+          next.driveRefreshToken ?? null, next.driveEmail ?? null, next.driveConnectedAt ?? null,
+          next.id],
       );
       if (!opts?.silent) await auditUserChanges(current, next, opts);
       return next;
@@ -536,12 +591,16 @@ async function persistUser(user: User, insert: boolean) {
       const p = await db();
       if (insert) {
         await p.query(
-          `INSERT INTO ws_users (id,email,name,nickname,role,provider,password_hash,color,initials,active,position,job_title,level,dept_id,team_id,extra_modules,member_id,created_at,updated_at,last_login_at)
-           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+          `INSERT INTO ws_users (id,email,name,nickname,role,provider,password_hash,color,initials,active,position,job_title,level,dept_id,team_id,extra_modules,member_id,created_at,updated_at,last_login_at,
+             google_sub,google_email,google_connected_at,line_user_id,line_display,line_picture,line_linked_at,drive_refresh_token,drive_email,drive_connected_at)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
           [user.id, user.email, user.name, user.nickname, user.role, user.provider, user.passwordHash ?? null,
             user.color, user.initials, user.active ? 1 : 0, user.position ?? "", user.jobTitle ?? "",
             user.level ?? "", user.departmentId ?? null, user.teamId ?? null, JSON.stringify(user.extraModules ?? []),
-            user.memberId ?? null, user.createdAt, user.updatedAt ?? null, user.lastLoginAt ?? null],
+            user.memberId ?? null, user.createdAt, user.updatedAt ?? null, user.lastLoginAt ?? null,
+            user.googleSub ?? null, user.googleEmail ?? null, user.googleConnectedAt ?? null,
+            user.lineUserId ?? null, user.lineDisplay ?? null, user.linePicture ?? null, user.lineLinkedAt ?? null,
+            user.driveRefreshToken ?? null, user.driveEmail ?? null, user.driveConnectedAt ?? null],
         );
         return;
       }
@@ -572,7 +631,18 @@ export async function upsertOAuthUser(input: {
   name: string;
   provider: AuthProvider;
   lineId?: string;
+  picture?: string;
 }): Promise<User> {
+  // ถ้า LINE user นี้ผูกกับบัญชีไว้แล้ว → เข้าเป็นบัญชีนั้นทันที (ไม่สนใจอีเมล)
+  if (input.provider === "line" && input.lineId) {
+    const linked = await getUserByLineId(input.lineId);
+    if (linked) {
+      if (!linked.active) throw new Error("บัญชีนี้ถูกระงับการใช้งาน กรุณาติดต่อผู้ดูแลระบบ");
+      await markLogin(linked.id);
+      return linked;
+    }
+  }
+
   const existing = await getUserByEmail(input.email);
   if (existing) {
     if (!existing.active) throw new Error("บัญชีนี้ถูกระงับการใช้งาน กรุณาติดต่อผู้ดูแลระบบ");

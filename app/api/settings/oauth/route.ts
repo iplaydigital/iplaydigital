@@ -15,7 +15,7 @@ export async function GET() {
 
 /**
  * บันทึกค่า OAuth จากหน้าเว็บ (ไม่ต้องแก้ .env / restart)
- * body: { googleId?, googleSecret?, lineId?, lineSecret?, publicUrl? }
+ * body: { googleId?, googleSecret?, lineId?, lineSecret?, lineOaToken?, lineOaSecret?, lineBotId?, publicUrl? }
  * ส่งค่าว่าง "" = ล้างค่า (กลับไปใช้ env)
  */
 export async function POST(req: Request) {
@@ -28,6 +28,9 @@ export async function POST(req: Request) {
     googleSecret: "googleSecret",
     lineId: "lineId",
     lineSecret: "lineSecret",
+    lineOaToken: "lineOaToken",
+    lineOaSecret: "lineOaSecret",
+    lineBotId: "lineBotId",
     publicUrl: "publicUrl",
   };
 
@@ -48,7 +51,7 @@ export async function POST(req: Request) {
     actorName: user.name,
     targetType: "settings",
     targetId: "oauth",
-    targetName: "การเชื่อมต่อ Google / LINE Login",
+    targetName: "การเชื่อมต่อ Google / LINE Login / LINE OA",
     action: "update",
     note: `แก้ไข: ${Object.keys(patch).join(", ") || "ไม่มีการเปลี่ยนแปลง"}`,
     ip,

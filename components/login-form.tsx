@@ -19,7 +19,9 @@ const ERRORS: Record<string, string> = {
   line_verify: "ตรวจสอบ LINE id_token ไม่ผ่าน",
   line_no_email: "LINE ไม่ได้อนุญาตให้เข้าถึงอีเมล — เข้าสู่ระบบด้วยอีเมล/รหัสผ่านแทนได้",
   line_failed: "เชื่อมต่อ LINE ไม่สำเร็จ ลองใหม่ภายหลัง",
-  domain: "อนุญาตเฉพาะอีเมลโดเมนบริษัทเท่านั้น",
+  domain: "อนุญาตเฉพาะอีเมล @playdigital.co.th หรือ @gmail.com เท่านั้น",
+  line_suspended: "บัญชีนี้ถูกระงับการใช้งาน",
+  line_link_required: "LINE นี้ยังไม่ได้ผูกบัญชี — เข้าสู่ระบบด้วยอีเมล/รหัสผ่าน แล้วไปผูกที่หน้าโปรไฟล์",
   session: "เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่",
 };
 
@@ -61,7 +63,7 @@ export function LoginForm({ googleReady, lineReady }: { googleReady: boolean; li
       <div className="login-head">
         <div className="login-badge"><ShieldCheck size={14} /> เข้าสู่ระบบ</div>
         <h2>ยินดีต้อนรับกลับ</h2>
-        <p className="muted">ใช้อีเมลบริษัทและรหัสผ่าน หรือเลือกเข้าสู่ระบบด้วย Google / LINE</p>
+        <p className="muted">ใช้อีเมล <b>@playdigital.co.th</b> หรือ <b>@gmail.com</b> กับรหัสผ่าน หรือเข้าสู่ระบบด้วย Google / LINE ที่ผูกไว้</p>
       </div>
 
       {error && (
@@ -73,7 +75,7 @@ export function LoginForm({ googleReady, lineReady }: { googleReady: boolean; li
 
       <form onSubmit={submit} className="login-form">
         <label className="field">
-          <span className="label">อีเมลบริษัท</span>
+          <span className="label">อีเมล (@playdigital.co.th หรือ @gmail.com)</span>
           <span className="login-input">
             <Mail size={14} />
             <input
@@ -81,7 +83,7 @@ export function LoginForm({ googleReady, lineReady }: { googleReady: boolean; li
               type="email"
               autoComplete="username"
               required
-              placeholder="name@playdigital.co.th"
+              placeholder="name@playdigital.co.th หรือ name@gmail.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               disabled={busy}
@@ -119,7 +121,7 @@ export function LoginForm({ googleReady, lineReady }: { googleReady: boolean; li
       <div className="login-oauth">
         <a className="auth-btn google" href={googleReady ? "/api/auth/google" : "/api/auth/google"} aria-disabled={!googleReady}>
           <GoogleIcon />
-          <span>Google Workspace / Gmail</span>
+          <span>Google / Gmail</span>
           {!googleReady && <small>ยังไม่ตั้งค่า</small>}
         </a>
         <a className="auth-btn line" href="/api/auth/line">
@@ -137,6 +139,9 @@ export function LoginForm({ googleReady, lineReady }: { googleReady: boolean; li
         <div><code>ploy@playdigital.co.th</code> · Manager</div>
         <div><code>nan@playdigital.co.th</code> · User</div>
         <div className="tiny muted">รหัสผ่านเริ่มต้น: <code>iplay@2026</code> (หรือค่าจาก <code>ADMIN_INITIAL_PASSWORD</code>)</div>
+        <div className="tiny muted" style={{ marginTop: 6 }}>
+          ใช้ได้ทั้งอีเมลบริษัทและ <code>@gmail.com</code> · ต้องการผูก LINE เพิ่ม? เข้าใช้แล้วไปที่ <b>โปรไฟล์ → เชื่อมต่อช่องทาง</b>
+        </div>
       </div>
     </>
   );

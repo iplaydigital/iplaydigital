@@ -46,7 +46,13 @@ export function ReportsView() {
   const [busy, setBusy] = useState(false);
   const [linkInput, setLinkInput] = useState("");
   const [uploading, setUploading] = useState(false);
-  const [drive, setDrive] = useState<{ configured: boolean; mode: string; hint: string; folderUrl: string } | null>(null);
+  const [drive, setDrive] = useState<{
+    configured: boolean;
+    mode: string;
+    hint: string;
+    folderUrl: string;
+    needsUserConnect?: boolean;
+  } | null>(null);
 
   const manager = me?.role === "admin" || me?.role === "support";
 
@@ -68,7 +74,9 @@ export function ReportsView() {
     void load();
     void fetch("/api/drive/status", { cache: "no-store" })
       .then((r) => r.json())
-      .then((b: { drive?: { configured: boolean; mode: string; hint: string; folderUrl: string } }) => setDrive(b.drive ?? null))
+      .then((b: { drive?: { configured: boolean; mode: string; hint: string; folderUrl: string; needsUserConnect?: boolean } }) =>
+        setDrive(b.drive ?? null),
+      )
       .catch(() => setDrive(null));
   }, [load]);
 
@@ -212,11 +220,16 @@ export function ReportsView() {
         </div>
         <div className="card-body">
           <div className="drive-status">
-            <span className={cls("pill", drive?.configured ? "ok" : "warn")}>
-              <CloudUpload size={10} /> Google Drive · {drive?.configured ? "เชื่อมต่อแล้ว" : "โหมดลิงก์"}
+            <span className={cls("pill", drive?.configured && !drive?.needsUserConnect ? "ok" : "warn")}>
+              <CloudUpload size={10} /> Google Drive · {drive?.configured && !drive?.needsUserConnect ? "เชื่อมต่อแล้ว" : "ยังไม่เชื่อม"}
             </span>
             <span className="tiny muted">{drive?.hint ?? "ตรวจสอบสถานะการเชื่อมต่อ Google Drive"}</span>
-            {drive?.folderUrl && (
+            {drive?.needsUserConnect && (
+              <a className="link-btn" href="/api/auth/google?mode=drive">
+                <CloudUpload size={10} /> เชื่อม Drive ของฉัน (Gmail)
+              </a>
+            )}
+            {drive?.mode === "user" && drive?.folderUrl && (
               <a className="link-btn" href={drive.folderUrl} target="_blank" rel="noreferrer">เปิดโฟลเดอร์กลาง</a>
             )}
           </div>

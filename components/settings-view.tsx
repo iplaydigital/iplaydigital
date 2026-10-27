@@ -397,6 +397,8 @@ function DataTab() {
 interface OAuthInfo {
   google: { clientId: string; secretSet: boolean; configured: boolean; source: "ui" | "env" | "none" };
   line: { clientId: string; secretSet: boolean; configured: boolean; source: "ui" | "env" | "none" };
+  lineOa: { tokenSet: boolean; secretSet: boolean; configured: boolean; botId: string; webhookUrl: string };
+  webhook: string;
   publicUrl: string;
   redirects: { google: string; line: string };
   allowlist: string;
@@ -408,7 +410,16 @@ function LoginTab() {
   const [info, setInfo] = useState<OAuthInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({ googleId: "", googleSecret: "", lineId: "", lineSecret: "", publicUrl: "" });
+  const [form, setForm] = useState({
+    googleId: "",
+    googleSecret: "",
+    lineId: "",
+    lineSecret: "",
+    lineOaToken: "",
+    lineOaSecret: "",
+    lineBotId: "",
+    publicUrl: "",
+  });
   const [showSecret, setShowSecret] = useState(false);
 
   const load = useCallback(async () => {
@@ -423,6 +434,9 @@ function LoginTab() {
         googleSecret: "",
         lineId: body.line.clientId ?? "",
         lineSecret: "",
+        lineOaToken: "",
+        lineOaSecret: "",
+        lineBotId: body.lineOa?.botId ?? "",
         publicUrl: body.publicUrl ?? "",
       });
     } catch (err) {
@@ -440,11 +454,14 @@ function LoginTab() {
       const payload: Record<string, string> = {
         googleId: form.googleId,
         lineId: form.lineId,
+        lineBotId: form.lineBotId,
         publicUrl: form.publicUrl,
       };
       // ส่ง secret เฉพาะเมื่อพิมพ์ใหม่ (ช่องว่าง = คงค่าเดิม)
       if (form.googleSecret) payload.googleSecret = form.googleSecret;
       if (form.lineSecret) payload.lineSecret = form.lineSecret;
+      if (form.lineOaToken) payload.lineOaToken = form.lineOaToken;
+      if (form.lineOaSecret) payload.lineOaSecret = form.lineOaSecret;
 
       const res = await fetch("/api/settings/oauth", {
         method: "POST",
@@ -454,7 +471,7 @@ function LoginTab() {
       const body = (await res.json().catch(() => ({}))) as OAuthInfo & { error?: string };
       if (!res.ok) throw new Error(body.error || "บันทึกไม่สำเร็จ");
       setInfo(body);
-      setForm((f) => ({ ...f, googleSecret: "", lineSecret: "" }));
+      setForm((f) => ({ ...f, googleSecret: "", lineSecret: "", lineOaToken: "", lineOaSecret: "" }));
       toast("บันทึกการเชื่อมต่อ Login แล้ว — ใช้งานได้ทันที", "ok");
     } catch (err) {
       toast((err as Error).message, "err");
@@ -463,13 +480,22 @@ function LoginTab() {
     }
   };
 
-  const clearSecret = async (which: "google" | "line") => {
-    if (!window.confirm(`ล้าง ${which === "google" ? "Google" : "LINE"} Client Secret?`)) return;
+  const clearSecret = async (which: "google" | "line" | "lineOa" | "lineOaSecret") => {
+    const name = which === "google" ? "Google Client Secret" : which === "line" ? "LINE Login Secret" : which === "lineOa" ? "LINE OA Access Token" : "LINE OA Channel Secret";
+    if (!window.confirm(`ล้าง ${name}?`)) return;
     try {
+      const payload =
+        which === "google"
+          ? { googleSecret: "" }
+          : which === "line"
+            ? { lineSecret: "" }
+            : which === "lineOa"
+              ? { lineOaToken: "" }
+              : { lineOaSecret: "" };
       const res = await fetch("/api/settings/oauth", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify(which === "google" ? { googleSecret: "" } : { lineSecret: "" }),
+        body: JSON.stringify(payload),
       });
       const body = (await res.json().catch(() => ({}))) as OAuthInfo & { error?: string };
       if (!res.ok) throw new Error(body.error || "ล้างค่าไม่สำเร็จ");
@@ -533,6 +559,17 @@ function LoginTab() {
                   <div className="tiny muted">Channel ID: {info.line.clientId || "—"}</div>
                   <div className="tiny muted">Channel Secret: {info.line.secretSet ? "ตั้งค่าแล้ว" : "ยังไม่มี"} · {sourceLabel(info.line.source)}</div>
                 </div>
+                <div className={cls("login-state", info.lineOa?.configured && "on")}>
+                  <div className="ls-head">
+                    <b>LINE OA (Messaging API)</b>
+                    <span className={cls("pill", info.lineOa?.configured ? "ok" : "warn")}>
+                      {info.lineOa?.configured ? <><Check size={9} /> พร้อมรับ–ส่ง</> : "ยังไม่พร้อม"}
+                    </span>
+                  </div>
+                  <div className="tiny muted">Access Token: {info.lineOa?.tokenSet ? "ตั้งค่าแล้ว" : "ยังไม่มี"}</div>
+                  <div className="tiny muted">Channel Secret: {info.lineOa?.secretSet ? "ตั้งค่าแล้ว" : "ยังไม่มี"}</div>
+                  <div className="tiny muted">Webhook: <code>{info.lineOa?.webhookUrl || info.webhook}</code></div>
+                </div>
               </div>
 
               <div className="grid-2" style={{ gap: 10 }}>
@@ -552,6 +589,18 @@ function LoginTab() {
                   <span className="label">LINE Channel Secret</span>
                   <input className="input" type={showSecret ? "text" : "password"} value={form.lineSecret} onChange={(e) => setForm({ ...form, lineSecret: e.target.value })} placeholder={info.line.secretSet ? "•••••••• (เว้นว่าง = คงค่าเดิม)" : "channel secret"} />
                 </label>
+                <label className="field">
+                  <span className="label">LINE OA — Channel Access Token</span>
+                  <input className="input" type={showSecret ? "text" : "password"} value={form.lineOaToken} onChange={(e) => setForm({ ...form, lineOaToken: e.target.value })} placeholder={info.lineOa.tokenSet ? "•••••••• (เว้นว่าง = คงค่าเดิม)" : "long-lived channel access token"} />
+                </label>
+                <label className="field">
+                  <span className="label">LINE OA — Channel Secret (ตรวจ signature)</span>
+                  <input className="input" type={showSecret ? "text" : "password"} value={form.lineOaSecret} onChange={(e) => setForm({ ...form, lineOaSecret: e.target.value })} placeholder={info.lineOa.secretSet ? "•••••••• (เว้นว่าง = คงค่าเดิม)" : "Messaging API channel secret"} />
+                </label>
+                <label className="field">
+                  <span className="label">LINE OA — Basic ID (ถ้ามี)</span>
+                  <input className="input" value={form.lineBotId} onChange={(e) => setForm({ ...form, lineBotId: e.target.value })} placeholder="@your-oa" />
+                </label>
                 <label className="field" style={{ gridColumn: "span 2" }}>
                   <span className="label">URL สาธารณะของระบบ (ใช้สร้าง redirect URI)</span>
                   <input className="input" value={form.publicUrl} onChange={(e) => setForm({ ...form, publicUrl: e.target.value })} placeholder="https://workspace.playdigital.co.th" />
@@ -567,6 +616,8 @@ function LoginTab() {
                 </button>
                 <button className="btn btn-sm" style={{ color: "var(--red)" }} onClick={() => void clearSecret("google")}>ล้าง Google Secret</button>
                 <button className="btn btn-sm" style={{ color: "var(--red)" }} onClick={() => void clearSecret("line")}>ล้าง LINE Secret</button>
+                <button className="btn btn-sm" style={{ color: "var(--red)" }} onClick={() => void clearSecret("lineOa")}>ล้าง LINE OA Token</button>
+                <button className="btn btn-sm" style={{ color: "var(--red)" }} onClick={() => void clearSecret("lineOaSecret")}>ล้าง OA Secret</button>
               </div>
 
               <div className="divider" />
@@ -581,6 +632,11 @@ function LoginTab() {
                 <span className="tiny muted" style={{ width: 64 }}>LINE</span>
                 <code className="code-chip" style={{ flex: 1, overflow: "auto" }}>{info.redirects.line}</code>
                 <button className="btn btn-sm" onClick={() => void copy(info.redirects.line, "LINE redirect URI")}><Copy size={11} /> คัดลอก</button>
+              </div>
+              <div className="redirect-row">
+                <span className="tiny muted" style={{ width: 64 }}>Webhook</span>
+                <code className="code-chip" style={{ flex: 1, overflow: "auto" }}>{info.webhook}</code>
+                <button className="btn btn-sm" onClick={() => void copy(info.webhook, "LINE webhook URL")}><Copy size={11} /> คัดลอก</button>
               </div>
 
               <div className="grid-2" style={{ gap: 10 }}>
@@ -600,6 +656,16 @@ function LoginTab() {
                   <div>3. ใส่ Callback URL ตามด้านบน (ต้องตรงทุกตัวอักษร)</div>
                   <div>4. คัดลอก Channel ID / Channel Secret มาวางในหน้านี้</div>
                   <div>5. ยื่นขอสิทธิ์ Email address (ถ้าต้องการอีเมลจริงจาก LINE)</div>
+                  <a className="link-btn" href="https://developers.line.biz/console/" target="_blank" rel="noreferrer">เปิด LINE Developers</a>
+                </div>
+                <div className="side-card" style={{ fontSize: 11 }}>
+                  <b><Zap size={12} /> LINE OA (รับ–ส่งข้อความในแชท)</b>
+                  <div>1. LINE Developers → สร้าง Channel ชนิด <b>Messaging API</b> (หรือเปิดใช้ใน OA เดิม)</div>
+                  <div>2. Channel access token → ออก long-lived token แล้ววางในช่องด้านบน</div>
+                  <div>3. Channel secret → ใช้อันเดียวกับที่ใช้ตรวจ signature ของ webhook</div>
+                  <div>4. Webhook URL → วาง URL ด้านบน แล้วกด <b>Verify</b></div>
+                  <div>5. เปิด <b>Use webhook</b> + ปิด “ตอบกลับอัตโนมัติ” ถ้าต้องการให้ระบบตอบแทน</div>
+                  <div>6. เชิญ OA เข้ากลุ่ม LINE แล้วผูกกลุ่มในหน้าแชท (ไอคอน LINE ในช่องพิมพ์)</div>
                   <a className="link-btn" href="https://developers.line.biz/console/" target="_blank" rel="noreferrer">เปิด LINE Developers</a>
                 </div>
               </div>

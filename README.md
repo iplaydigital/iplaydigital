@@ -452,7 +452,7 @@ npm run db:migrate           # สร้าง/อัปเกรดตารา
 ### ความปลอดภัย
 - รหัสผ่านเก็บเป็น **scrypt hash** (`scrypt$salt$hash`) ไม่เก็บ plain text
 - session เป็น **HMAC-SHA256 signed cookie** (`ipw_session`, HttpOnly, SameSite=Lax, 7 วัน, `Secure` ใน production)
-- ตรวจโดเมนอีเมลจาก `ALLOWED_EMAIL_DOMAIN` ทั้งตอนล็อกอินปกติและ OAuth
+- ตรวจโดเมนอีเมลจาก `ALLOWED_EMAIL_DOMAIN` (ค่าเริ่มต้น `playdigital.co.th,gmail.com`) ทั้งตอนล็อกอินปกติและ OAuth
 - ระงับบัญชี (`active = 0`) = ตัด session ทันทีในคำขอถัดไป
 
 ## 🔑 ตั้งค่า Google / LINE Login จากหน้า Super Admin
@@ -465,14 +465,37 @@ npm run db:migrate           # สร้าง/อัปเกรดตารา
 > ค่าที่บันทึกในหน้านี้จะชนะค่าใน `.env` · Secret ถูกบันทึกแบบไม่แสดงผล · ทุกการแก้ไขอยู่ใน audit log
 > เก็บในตาราง `ws_oauth` (MariaDB) หรือ `.data/oauth.json` เมื่อ DB ไม่พร้อม
 
+## 🪪 ช่องทางเข้าสู่ระบบ (Identity) — @playdigital.co.th หรือ @gmail.com
+- อีเมลหลักที่ใช้ได้: **`@playdigital.co.th`** (ยอมรับ subdomain) และ **`@gmail.com`** — กำหนดด้วย `ALLOWED_EMAIL_DOMAIN`
+- **ทุกช่องทางที่ผูกไว้ใช้เข้าสู่ระบบได้ทั้งหมด**: อีเมล+รหัสผ่าน, Google (Gmail หรือ Workspace), LINE
+- **LINE เป็นช่องทางเสริม** — ผูกจากหน้า `โปรไฟล์ของฉัน → เชื่อมต่อช่องทางเพิ่มเติม`
+  - หลังผูกแล้วกด “เข้าสู่ระบบด้วย LINE” ได้ทันที (และ OA ส่งข้อความกลับหาผู้ใช้ได้)
+- หน้าโปรไฟล์ยังใช้ **ยกเลิกการเชื่อมต่อ** แต่ละช่องทางได้ (`/api/profile/links`)
+
+### Google Drive อยู่ใต้บัญชี Google ของผู้ใช้เอง
+- ผู้ใช้กด **เชื่อม Google Drive** ที่หน้าโปรไฟล์ (`/api/auth/google?mode=drive`, scope `drive.file`)
+- ระบบเก็บ refresh token รายคนใน `ws_users.drive_refresh_token` — ไฟล์ทั้งหมดอยู่ในไดรฟ์ของเจ้าของ ไม่ใช้บัญชีกลาง
+- `lib/drive.ts` เลือกลำดับ credential: **ของผู้ใช้ → บัญชีกลาง (`GOOGLE_DRIVE_REFRESH_TOKEN`) → โหมดลิงก์**
+
+## 💬 LINE Official Account (รับ–ส่งข้อความในแชท)
+1. สร้าง **Messaging API channel** ใน LINE Developers (หรือเปิดใช้กับ OA เดิม)
+2. `ตั้งค่า → Login & เชื่อมต่อ` → กรอก **Channel Access Token**, **Channel Secret**, **Basic ID**
+3. วาง **Webhook URL** `{AUTH_URL}/api/line/webhook` แล้วกด **Verify** · เปิด “Use webhook”
+4. ข้อความที่ส่งเข้า OA → เข้ากล่อง LINE ในหน้า **แชท & Drive** (`/api/line/send` GET)
+5. ส่งข้อความออกจากแชท → ไอคอน LINE ในช่องพิมพ์ → เลือก **กลุ่ม LINE / ผู้ใช้** หรือ **LINE ของฉัน**
+   - ผูกแชทกับกลุ่ม LINE ได้ด้วย groupId (`C…`) — เก็บใน `.data/line-bindings.json`
+- API: `POST /api/line/webhook` (ตรวจ `x-line-signature`), `GET/POST /api/line/send`, `GET/POST/DELETE /api/line/bindings`, `GET /api/line/status`
+
 ## 📄 รายงาน + Google Drive
 - เมนู **รายงาน & Drive**: สร้าง/แก้ไข/อนุมัติ/ลบรายงาน (รหัส `RPT-xxxx`), งวดเดือน, โปรเจกต์, สรุป, ไฟล์แนบ
-- แนบไฟล์ 2 ทาง: **วางลิงก์ Drive/Docs** หรือ **อัปโหลดไฟล์จริง** (≤ 20 MB) เข้าโฟลเดอร์กลาง
+- แนบไฟล์ 2 ทาง: **วางลิงก์ Drive/Docs** หรือ **อัปโหลดไฟล์จริง** (≤ 20 MB) เข้า Google Drive ของผู้ใช้เอง
+  (ต้องกด “เชื่อม Drive ของฉัน” ที่หน้าโปรไฟล์หรือปุ่มในหน้ารายงานก่อน)
 - โหมดการเชื่อมต่อ (`lib/drive.ts`)
   | โหมด | เงื่อนไข | พฤติกรรม |
   |---|---|---|
-  | `oauth` | มี `GOOGLE_DRIVE_CLIENT_ID/SECRET/REFRESH_TOKEN` | อัปโหลดเข้า Drive จริง (`drive.file` scope) |
-  | `link` | ยังไม่ตั้งค่า | เก็บเป็นลิงก์ไฟล์ — ระบบยังใช้งานได้ครบ |
+  | `user` | ผู้ใช้เชื่อม Drive ของตนเอง (แนะนำ) | อัปโหลดเข้า **Google Drive ของผู้ใช้** (`drive.file` scope) |
+  | `oauth` | มี `GOOGLE_DRIVE_REFRESH_TOKEN` (บัญชีกลางของทีม) | อัปโหลดด้วยบัญชีกลาง — fallback |
+  | `link` | ยังไม่เชื่อม | เก็บเป็นลิงก์ไฟล์ — ระบบยังใช้งานได้ครบ |
 - รายงานเก็บในตาราง `ws_reports` (MariaDB) หรือ `.data/reports.json` เมื่อ DB ไม่พร้อม
 
 ## ⚙️ หน้าตั้งค่า (Split ตามงาน)
@@ -482,3 +505,6 @@ npm run db:migrate           # สร้าง/อัปเกรดตารา
 3. **รายงาน & Drive** — สถานะ Drive, โฟลเดอร์กลาง, รายงานล่าสุด
 4. **การเชื่อมต่อ & AI** — จอ LED, MCP/AI Gateway, เปิด-พัก AI agents
 5. **ข้อมูล & ความปลอดภัย** — สถานะ DB, diagnostics, export JSON/CSV, รีเซ็ต (Admin)
+6. **Login & เชื่อมต่อ** (Super Admin) — Google/LINE Login + LINE OA (access token / secret / webhook)
+
+> หน้า **โปรไฟล์ของฉัน** (เมนูระบบ) เห็นได้ทุกบทบาท — ใช้ผูก/ยกเลิก Google, LINE และ Google Drive ของตนเอง

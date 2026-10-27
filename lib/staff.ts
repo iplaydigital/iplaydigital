@@ -93,7 +93,7 @@ export async function createStaff(
 ): Promise<{ user: SessionUser; initialPassword: string }> {
   assertCanManage(actor);
   if (!input.email || !input.name) throw new StaffError("ต้องมีชื่อและอีเมล");
-  if (!isAllowedEmail(input.email)) throw new StaffError("อีเมลต้องอยู่ในโดเมนของบริษัท");
+  if (!isAllowedEmail(input.email)) throw new StaffError("อีเมลต้องเป็น @playdigital.co.th หรือ @gmail.com");
   if (input.role === "admin" && !roleScope(actor.role).grantAdmin) {
     throw new StaffError("เฉพาะสิทธิ์ Admin เท่านั้นที่สร้างบัญชี Admin ได้", 403);
   }
@@ -164,7 +164,7 @@ export async function updateStaff(
     extraModules: patch.extraModules as string[] | undefined,
   };
   if (typeof patch.email === "string" && patch.email) {
-    if (!isAllowedEmail(patch.email)) throw new StaffError("อีเมลต้องอยู่ในโดเมนของบริษัท");
+    if (!isAllowedEmail(patch.email)) throw new StaffError("อีเมลต้องเป็น @playdigital.co.th หรือ @gmail.com");
     next.email = normEmail(patch.email);
   }
   if (typeof patch.password === "string" && patch.password) {
