@@ -879,12 +879,6 @@ h1, h2, h3, h4, p { margin: 0; }
 }
 .auth-btn.line { border-color: #c9f2dc; }
 .auth-btn.line:hover { border-color: #06c755; background: #f2fdf7; }
-.login-hint {
-  margin-top: 16px; padding: 11px 12px; border-radius: 13px; background: var(--panel-2);
-  border: 1px dashed var(--stroke-2); font-size: 10.5px; line-height: 1.8; color: var(--text-2);
-}
-.login-hint b { display: block; font-size: 10.5px; color: var(--text); margin-bottom: 3px; }
-.login-hint code { font-size: 10px; background: #fff; padding: 1px 5px; border-radius: 5px; border: 1px solid var(--line); }
 
 /* ══════════════════════════════════════════════════════════════
    REPORTS
