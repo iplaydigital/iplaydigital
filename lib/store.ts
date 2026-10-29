@@ -53,6 +53,12 @@ function persist(data: StoreData) {
   }
 }
 
+/** บันทึก store กลับลงไฟล์ (ใช้โดยโมดูลที่แก้ข้อมูลตรง เช่น โปรเจกต์) */
+export function saveStore(data: StoreData) {
+  g.__iplayStore = data;
+  persist(data);
+}
+
 function log(data: StoreData, actorId: string, text: string, kind: ActivityItem["kind"]) {
   data.activity.unshift({ id: uid("a"), at: new Date().toISOString(), actorId, text, kind });
   data.activity = data.activity.slice(0, 120);

@@ -25,6 +25,7 @@ export async function POST(req: Request) {
     period: body.period,
     projectId: body.projectId ?? null,
     authorId: user.memberId || user.id,
+    authorName: user.name,
     summary: body.summary,
     status: body.status || "draft",
     driveUrl: body.driveUrl,

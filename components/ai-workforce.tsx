@@ -4,6 +4,7 @@ import React, { useMemo, useState } from "react";
 import {
   Activity, Bot, BrainCircuit, CheckCircle2, ChevronRight, Cpu, Gauge, Pause,
   Play, Plus, RefreshCw, ShieldCheck, Sparkles, Terminal, Timer, Coins, Zap,
+  Settings2, Plug, Loader2, Save, KeyRound,
 } from "lucide-react";
 import { useApp } from "./providers";
 import { Avatar, Empty, Meter, Modal } from "./ui";
@@ -12,9 +13,24 @@ import { agentStatusText } from "../lib/ai";
 import { cls, relTime, thaiTime } from "../lib/utils";
 
 export function AiWorkforce() {
-  const { data, act, toast, openTask } = useApp();
+  const { data, act, toast, openTask, me } = useApp();
   const [assign, setAssign] = useState<string | null>(null);
+  const [configOf, setConfigOf] = useState<string | null>(null);
+  const [configs, setConfigs] = useState<AgentConfigPublic[] | null>(null);
   const [filter, setFilter] = useState<"all" | "running" | "success">("all");
+
+  const loadConfigs = React.useCallback(async () => {
+    try {
+      const res = await fetch("/api/ai/agents", { cache: "no-store" });
+      const body = (await res.json().catch(() => ({}))) as { agents?: AgentConfigPublic[] };
+      setConfigs(body.agents ?? []);
+    } catch {
+      setConfigs([]);
+    }
+  }, []);
+
+  React.useEffect(() => { void loadConfigs(); }, [loadConfigs]);
+
   if (!data) return null;
 
   const agents = data.members.filter((m) => m.kind === "ai");
@@ -101,6 +117,9 @@ export function AiWorkforce() {
               <div className="row">
                 <button className="btn btn-sm" style={{ flex: 1, justifyContent: "center" }} onClick={() => setAssign(a.id)}>
                   <Sparkles size={12} /> มอบงาน
+                </button>
+                <button className="btn btn-sm" style={{ flex: 1, justifyContent: "center" }} onClick={() => { setConfigOf(a.id); void loadConfigs(); }}>
+                  <Settings2 size={12} /> ตั้งค่า AI
                 </button>
                 <button
                   className="btn btn-sm"
@@ -195,6 +214,15 @@ export function AiWorkforce() {
       </div>
 
       {assign && <AssignModal agentId={assign} onClose={() => setAssign(null)} />}
+      {configOf && (
+        <AgentConfigModal
+          agentId={configOf}
+          config={configs?.find((c) => c.id === configOf) ?? null}
+          canEdit={Boolean(me && (me.role === "admin" || me.role === "support"))}
+          onClose={() => setConfigOf(null)}
+          onSaved={async () => { await loadConfigs(); }}
+        />
+      )}
     </div>
   );
 }
@@ -262,6 +290,244 @@ function AssignModal({ agentId, onClose }: { agentId: string; onClose: () => voi
         <span className="label">หรือสั่งด้วยภาษาธรรมชาติ</span>
         <textarea className="textarea" placeholder="เช่น ตรวจรีวิวโค้ดโมดูลแชทแล้วสรุปประเด็นเสี่ยง" />
       </label>
+    </Modal>
+  );
+}
+
+// ── ตั้งค่า AI แต่ละตัว: เชื่อม API · ค่าใช้จ่าย · การทำงานในแชท ──
+interface AgentConfigPublic {
+  id: string;
+  name: string;
+  role: string;
+  provider: "local" | "openai" | "anthropic" | "google" | "custom" | "gateway";
+  baseUrl: string;
+  model: string;
+  apiKeySet: boolean;
+  temperature: number;
+  maxTokens: number;
+  systemPrompt: string;
+  costIn: number;
+  costOut: number;
+  budget: number;
+  tokensMonth: number;
+  costMonth: number;
+  chatEnabled: boolean;
+  autoReply: boolean;
+  updatedAt: string | null;
+}
+
+const PROVIDERS: { key: AgentConfigPublic["provider"]; label: string; baseUrl: string; model: string; hint: string }[] = [
+  { key: "local", label: "ในระบบ (rule engine · ฟรี)", baseUrl: "", model: "", hint: "ใช้ข้อมูล Workspace ตอบเอง ไม่มีค่าใช้จ่าย" },
+  { key: "openai", label: "OpenAI", baseUrl: "https://api.openai.com/v1", model: "gpt-4.1-mini", hint: "คีย์ขึ้นต้น sk-…" },
+  { key: "anthropic", label: "Anthropic Claude", baseUrl: "https://api.anthropic.com/v1", model: "claude-sonnet-4-5", hint: "คีย์ขึ้นต้น sk-ant-…" },
+  { key: "google", label: "Google Gemini", baseUrl: "https://generativelanguage.googleapis.com/v1beta", model: "gemini-2.5-flash", hint: "API key จาก Google AI Studio" },
+  { key: "custom", label: "OpenAI-compatible อื่น ๆ", baseUrl: "", model: "", hint: "OpenRouter / Typhoon / Ollama / vLLM" },
+  { key: "gateway", label: "AI Gateway ของบริษัท", baseUrl: "", model: "", hint: "ใช้ AI_GATEWAY_URL + AI_GATEWAY_KEY" },
+];
+
+function AgentConfigModal({
+  agentId,
+  config,
+  canEdit,
+  onClose,
+  onSaved,
+}: {
+  agentId: string;
+  config: AgentConfigPublic | null;
+  canEdit: boolean;
+  onClose: () => void;
+  onSaved: () => Promise<void>;
+}) {
+  const { toast } = useApp();
+  const [form, setForm] = useState(() => ({
+    provider: config?.provider ?? "local",
+    baseUrl: config?.baseUrl ?? "",
+    model: config?.model ?? "",
+    apiKey: "",
+    temperature: config?.temperature ?? 0.4,
+    maxTokens: config?.maxTokens ?? 1200,
+    systemPrompt: config?.systemPrompt ?? "",
+    costIn: config?.costIn ?? 0,
+    costOut: config?.costOut ?? 0,
+    budget: config?.budget ?? 0,
+    chatEnabled: config?.chatEnabled ?? true,
+    autoReply: config?.autoReply ?? true,
+  }));
+  const [saving, setSaving] = useState(false);
+
+  React.useEffect(() => {
+    if (!config) return;
+    setForm((f) => ({
+      ...f,
+      provider: config.provider,
+      baseUrl: config.baseUrl,
+      model: config.model,
+      temperature: config.temperature,
+      maxTokens: config.maxTokens,
+      systemPrompt: config.systemPrompt,
+      costIn: config.costIn,
+      costOut: config.costOut,
+      budget: config.budget,
+      chatEnabled: config.chatEnabled,
+      autoReply: config.autoReply,
+    }));
+  }, [config]);
+
+  const meta = PROVIDERS.find((p) => p.key === form.provider) ?? PROVIDERS[0];
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      const res = await fetch("/api/ai/agents", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ id: agentId, ...form, apiKey: form.apiKey || undefined }),
+      });
+      const body = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
+      if (!res.ok || !body.ok) throw new Error(body.error || "บันทึกไม่สำเร็จ");
+      toast("บันทึกการตั้งค่า AI แล้ว", "ok");
+      setForm((f) => ({ ...f, apiKey: "" }));
+      await onSaved();
+      onClose();
+    } catch (err) {
+      toast((err as Error).message, "err");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const overBudget = Boolean(config && config.budget > 0 && config.costMonth >= config.budget);
+
+  return (
+    <Modal
+      wide
+      title={`ตั้งค่า ${config?.name ?? "AI agent"}`}
+      subtitle={config ? `${config.role} · ${meta.label}` : "กำลังโหลดการตั้งค่า…"}
+      icon={<Settings2 size={16} />}
+      onClose={onClose}
+      footer={
+        <>
+          <button className="btn" onClick={onClose}>ยกเลิก</button>
+          <button className="btn btn-primary" onClick={() => void save()} disabled={saving || !canEdit || !config}>
+            {saving ? <><Loader2 size={13} className="spin" /> กำลังบันทึก…</> : <><Save size={13} /> บันทึก</>}
+          </button>
+        </>
+      }
+    >
+      {!canEdit && (
+        <div className="login-alert" style={{ marginBottom: 10 }}>
+          <KeyRound size={13} />
+          <span>ดูได้อย่างเดียว — เฉพาะ Admin / Support เท่านั้นที่แก้ไขการเชื่อมต่อ API และค่าใช้จ่ายได้</span>
+        </div>
+      )}
+
+      {config && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <div className="ai-cost-box">
+            <div>
+              <span className="tiny muted">งบเดือนนี้</span>
+              <b>{config.budget ? `฿${config.budget.toLocaleString()}` : "ไม่จำกัด"}</b>
+            </div>
+            <div>
+              <span className="tiny muted">ใช้ไปแล้ว</span>
+              <b className={cls(overBudget && "ai-row-warn")}>฿{config.costMonth.toFixed(2)}</b>
+            </div>
+            <div>
+              <span className="tiny muted">tokens เดือนนี้</span>
+              <b>{config.tokensMonth.toLocaleString()}</b>
+            </div>
+          </div>
+
+          <div className="ai-config-grid">
+            <label className="field">
+              <span className="label"><Plug size={11} /> ผู้ให้บริการ (API)</span>
+              <select
+                className="select"
+                value={form.provider}
+                disabled={!canEdit}
+                onChange={(e) => {
+                  const key = e.target.value as AgentConfigPublic["provider"];
+                  const p = PROVIDERS.find((x) => x.key === key)!;
+                  setForm({
+                    ...form,
+                    provider: key,
+                    baseUrl: key === "local" || key === "gateway" ? "" : p.baseUrl,
+                    model: p.model || form.model,
+                  });
+                }}
+              >
+                {PROVIDERS.map((p) => <option key={p.key} value={p.key}>{p.label}</option>)}
+              </select>
+              <span className="tiny muted">{meta.hint}</span>
+            </label>
+            <label className="field">
+              <span className="label">โมเดล</span>
+              <input className="input" value={form.model} disabled={!canEdit} onChange={(e) => setForm({ ...form, model: e.target.value })} placeholder="claude-sonnet-4-5" />
+            </label>
+            <label className="field">
+              <span className="label">Base URL</span>
+              <input className="input" value={form.baseUrl} disabled={!canEdit} onChange={(e) => setForm({ ...form, baseUrl: e.target.value })} placeholder="https://api.openai.com/v1" />
+            </label>
+            <label className="field">
+              <span className="label">API Key {config.apiKeySet ? "· ตั้งค่าแล้ว" : "· ยังไม่มี"}</span>
+              <input
+                className="input"
+                type="password"
+                value={form.apiKey}
+                disabled={!canEdit}
+                onChange={(e) => setForm({ ...form, apiKey: e.target.value })}
+                placeholder={config.apiKeySet ? "•••••••• (เว้นว่าง = คงค่าเดิม)" : "วาง API key ที่นี่"}
+              />
+            </label>
+
+            <label className="field">
+              <span className="label">Temperature · {form.temperature}</span>
+              <input type="range" min={0} max={2} step={0.1} value={form.temperature} disabled={!canEdit} onChange={(e) => setForm({ ...form, temperature: Number(e.target.value) })} />
+            </label>
+            <label className="field">
+              <span className="label">Max tokens ต่อคำตอบ</span>
+              <input className="input" type="number" min={64} max={16000} value={form.maxTokens} disabled={!canEdit} onChange={(e) => setForm({ ...form, maxTokens: Number(e.target.value) })} />
+            </label>
+
+            <label className="field">
+              <span className="label">ราคา input (บาท / 1K tokens)</span>
+              <input className="input" type="number" step="0.01" min={0} value={form.costIn} disabled={!canEdit} onChange={(e) => setForm({ ...form, costIn: Number(e.target.value) })} />
+            </label>
+            <label className="field">
+              <span className="label">ราคา output (บาท / 1K tokens)</span>
+              <input className="input" type="number" step="0.01" min={0} value={form.costOut} disabled={!canEdit} onChange={(e) => setForm({ ...form, costOut: Number(e.target.value) })} />
+            </label>
+            <label className="field full">
+              <span className="label">งบต่อเดือน (บาท) · 0 = ไม่จำกัด</span>
+              <input className="input" type="number" step="10" min={0} value={form.budget} disabled={!canEdit} onChange={(e) => setForm({ ...form, budget: Number(e.target.value) })} />
+            </label>
+
+            <label className="field full">
+              <span className="label">System prompt (บุคลิกและวิธีตอบ)</span>
+              <textarea className="textarea" rows={3} value={form.systemPrompt} disabled={!canEdit} onChange={(e) => setForm({ ...form, systemPrompt: e.target.value })} placeholder={`คุณคือ ${config.name} …`} />
+            </label>
+
+            <div className="field full" style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
+              <label className="row" style={{ gap: 6, fontSize: 12 }}>
+                <input type="checkbox" checked={form.chatEnabled} disabled={!canEdit} onChange={(e) => setForm({ ...form, chatEnabled: e.target.checked })} />
+                ตอบในแชท (Chat)
+              </label>
+              <label className="row" style={{ gap: 6, fontSize: 12 }}>
+                <input type="checkbox" checked={form.autoReply} disabled={!canEdit} onChange={(e) => setForm({ ...form, autoReply: e.target.checked })} />
+                ตอบอัตโนมัติเมื่อถูกเรียก @
+              </label>
+            </div>
+          </div>
+
+          <div className="side-card" style={{ fontSize: 11 }}>
+            <b><BrainCircuit size={12} /> การทำงาน</b>
+            <div>• ถ้าเลือก “ในระบบ” จะใช้ engine อ่านข้อมูล Workspace ตอบเอง — ไม่มีค่าใช้จ่าย</div>
+            <div>• ถ้าเลือกผู้ให้บริการภายนอก ระบบจะส่งบริบทงาน/ปฏิทินของทีม (ไม่เกิน ~6k ตัวอักษร) ไปพร้อมคำถาม</div>
+            <div>• งบเดือนเต็ม → AI จะหยุดเรียก API และแจ้งเตือนในแชท (ข้อมูลค่าใช้จ่ายคิดจาก token จริงที่ผู้ให้บริการรายงาน)</div>
+            <div>• ค่าใช้จ่ายโดยประมาณ: {config.tokensMonth.toLocaleString()} tokens ≈ ฿{config.costMonth.toFixed(2)}</div>
+          </div>
+        </div>
+      )}
     </Modal>
   );
 }

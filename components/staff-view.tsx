@@ -191,7 +191,12 @@ export function StaffView() {
                     <tr key={u.id} onClick={() => setOpenId(u.id)}>
                       <td>
                         <div className="row" style={{ gap: 9 }}>
-                          <span className="avatar" style={{ background: u.color, color: textOn(u.color), width: 28, height: 28, fontSize: 10 }}>{u.initials}</span>
+                          {u.avatar ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img className="avatar" src={u.avatar} alt={u.name} style={{ width: 28, height: 28, objectFit: "cover" }} />
+                          ) : (
+                            <span className="avatar" style={{ background: u.color, color: textOn(u.color), width: 28, height: 28, fontSize: 10 }}>{u.initials}</span>
+                          )}
                           <div>
                             <b style={{ fontSize: 12 }}>{u.name}{u.id === me.id && <span className="tiny muted"> (คุณ)</span>}</b>
                             <div className="tiny muted">{u.email}</div>
@@ -266,6 +271,27 @@ export function StaffView() {
           onClose={() => setOpenId(null)}
           onEdit={() => setForm({ mode: "edit", user: open })}
           onPatch={patch}
+          onPhoto={async (file) => {
+            const small = await shrink(file);
+            const form = new FormData();
+            form.append("file", small);
+            const res = await fetch(`/api/staff/${open.id}/photo`, { method: "POST", body: form });
+            const body = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string; hint?: string };
+            if (!res.ok) return toast([body.error, body.hint].filter(Boolean).join(" — ") || "อัปโหลดรูปไม่สำเร็จ", "err");
+            toast("อัปเดตรูปพนักงานแล้ว", "ok");
+            await load();
+          }}
+          onPullLine={async () => {
+            const res = await fetch(`/api/staff/${open.id}/photo`, {
+              method: "POST",
+              headers: { "content-type": "application/json" },
+              body: JSON.stringify({ source: "line" }),
+            });
+            const body = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string; hint?: string };
+            if (!res.ok) return toast([body.error, body.hint].filter(Boolean).join(" — ") || "ดึงรูปจาก LINE ไม่สำเร็จ", "err");
+            toast("ดึงรูปจาก LINE แล้ว", "ok");
+            await load();
+          }}
           onDelete={scope?.deleteStaff ? () => void remove(open) : undefined}
         />
       )}
@@ -288,7 +314,7 @@ export function StaffView() {
 
 // ── drawer: โปรไฟล์ + ประวัติแก้ไข + การเข้าใช้ ────────────────
 function StaffDrawer({
-  user, departments, teams, scope, me, onClose, onEdit, onPatch, onDelete,
+  user, departments, teams, scope, me, onClose, onEdit, onPatch, onPhoto, onPullLine, onDelete,
 }: {
   user: SessionUser;
   departments: Department[];
@@ -298,6 +324,8 @@ function StaffDrawer({
   onClose: () => void;
   onEdit: () => void;
   onPatch: (u: SessionUser, data: Record<string, unknown>, msg: string) => Promise<void>;
+  onPhoto: (file: File) => Promise<void>;
+  onPullLine: () => Promise<void>;
   onDelete?: () => void;
 }) {
   const [tab, setTab] = useState<"profile" | "audit" | "login">("profile");
@@ -329,10 +357,35 @@ function StaffDrawer({
       <div className="drawer-overlay" onClick={onClose} />
       <aside className="drawer staff-drawer">
         <div className="drawer-head">
-          <span className="avatar" style={{ background: user.color, color: textOn(user.color), width: 40, height: 40, fontSize: 13 }}>{user.initials}</span>
+          {user.avatar ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img className="avatar" src={user.avatar} alt={user.name} style={{ width: 40, height: 40, objectFit: "cover" }} />
+          ) : (
+            <span className="avatar" style={{ background: user.color, color: textOn(user.color), width: 40, height: 40, fontSize: 13 }}>{user.initials}</span>
+          )}
           <div style={{ flex: 1 }}>
             <b style={{ fontSize: 14 }}>{user.name}</b>
             <div className="tiny muted">{user.email}</div>
+            {(scope?.manageStaff || user.id === me.id) && (
+              <div className="row" style={{ gap: 4, marginTop: 3 }}>
+                <label className="link-btn" style={{ fontSize: 10, cursor: "pointer" }}>
+                  อัปโหลดรูป
+                  <input
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    style={{ display: "none" }}
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) void onPhoto(f);
+                      e.target.value = "";
+                    }}
+                  />
+                </label>
+                <button className="link-btn" style={{ fontSize: 10 }} onClick={() => void onPullLine()}>
+                  ดึงรูปจาก LINE
+                </button>
+              </div>
+            )}
           </div>
           <button className="icon-btn" onClick={onClose}><X size={15} /></button>
         </div>
@@ -655,4 +708,22 @@ function NoAccess({ role }: { role: UserRole }) {
       </div>
     </div>
   );
+}
+
+/** ย่อรูปก่อนอัปโหลด (สูงสุด 512px) */
+async function shrink(file: File): Promise<File> {
+  try {
+    const bitmap = await createImageBitmap(file);
+    const scale = Math.min(1, 512 / Math.max(bitmap.width, bitmap.height));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(bitmap.width * scale);
+    canvas.height = Math.round(bitmap.height * scale);
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return file;
+    ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.86));
+    return blob ? new File([blob], "avatar.jpg", { type: "image/jpeg" }) : file;
+  } catch {
+    return file;
+  }
 }

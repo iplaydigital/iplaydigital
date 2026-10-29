@@ -149,9 +149,14 @@ export function ProfileView() {
         </div>
         <div className="card-body" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
           <div className="row" style={{ gap: 14, alignItems: "center", flexWrap: "wrap" }}>
-            <span className="avatar" style={{ background: me.color, color: "#fff", width: 52, height: 52, fontSize: 18 }}>
-              {me.initials}
-            </span>
+            {me.avatar ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img className="avatar" src={me.avatar} alt={me.name} style={{ width: 52, height: 52, objectFit: "cover" }} />
+            ) : (
+              <span className="avatar" style={{ background: me.color, color: "#fff", width: 52, height: 52, fontSize: 18 }}>
+                {me.initials}
+              </span>
+            )}
             <div style={{ flex: 1, minWidth: 200 }}>
               <b style={{ fontSize: 15 }}>{me.name}</b>
               <div className="tiny muted">{me.position || me.jobTitle || "—"}</div>

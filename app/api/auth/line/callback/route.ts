@@ -3,6 +3,7 @@ import { writeAudit, writeLogin } from "../../../../../lib/audit";
 import { backToProfile, clearStateCookie, loginError, readState, requestOrigin, stateMode } from "../../../../../lib/oauth";
 import { ensureSeedUsers, getUserByLineId, isAllowedEmail, updateUser, upsertOAuthUser } from "../../../../../lib/users";
 import { getOAuthConfig } from "../../../../../lib/oauth-config";
+import { imageUrlAsDataUrl } from "../../../../../lib/line";
 
 export const dynamic = "force-dynamic";
 
@@ -63,6 +64,11 @@ export async function GET(req: Request) {
         return backToProfile(origin, "line_already_linked", false);
       }
 
+      // ถ้ายังไม่มีรูปโปรไฟล์ ใช้รูปจาก LINE ให้อัตโนมัติ (แก้ไขทับได้ภายหลัง)
+      const avatarPatch = !user.avatar && profile.picture
+        ? { avatar: (await imageUrlAsDataUrl(profile.picture)) ?? null, avatarSource: "line" as const }
+        : {};
+
       await updateUser(
         user.id,
         {
@@ -70,6 +76,7 @@ export async function GET(req: Request) {
           lineDisplay: profile.name ?? null,
           linePicture: profile.picture ?? null,
           lineLinkedAt: new Date().toISOString(),
+          ...avatarPatch,
         },
         { actor: { id: user.id, name: user.name }, ip: requestMeta(req).ip },
       );
@@ -111,9 +118,16 @@ export async function GET(req: Request) {
       lineId: profile.sub,
       picture: profile.picture,
     });
+    const avatarData = !user.avatar && profile.picture ? await imageUrlAsDataUrl(profile.picture) : null;
     await updateUser(
       user.id,
-      { lineUserId: profile.sub, lineDisplay: profile.name ?? null, linePicture: profile.picture ?? null, lineLinkedAt: new Date().toISOString() },
+      {
+        lineUserId: profile.sub,
+        lineDisplay: profile.name ?? null,
+        linePicture: profile.picture ?? null,
+        lineLinkedAt: new Date().toISOString(),
+        ...(avatarData ? { avatar: avatarData, avatarSource: "line" as const } : {}),
+      },
       { silent: true },
     );
 

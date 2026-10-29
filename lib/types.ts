@@ -257,6 +257,12 @@ export interface SessionUser {
   memberId?: ID | null;
   /** โมดูลที่เพิ่มให้เป็นพิเศษ (นอกเหนือจากสิทธิ์ตามบทบาท) */
   extraModules?: string[];
+  /** รูปโปรไฟล์ (data URL / URL) */
+  avatar?: string | null;
+  /** ที่มาของรูป: upload | line | google */
+  avatarSource?: string | null;
+  /** หัวหน้าโดยตรง (ใช้สร้างผังองค์กร) */
+  managerId?: ID | null;
   /** Super Admin — สิทธิ์สูงสุด จัดการได้ทุกอย่างรวมถึงการตั้งค่า Login/OAuth */
   isSuper?: boolean;
   /** บัญชีที่ผูกไว้ (Google / LINE / Drive ของผู้ใช้เอง) */
@@ -322,6 +328,8 @@ export interface Report {
   period: string; // YYYY-MM
   projectId?: ID | null;
   authorId: ID;
+  /** ชื่อผู้เขียน (สำหรับบัญชีที่ไม่ได้ผูกกับ member) */
+  authorName?: string;
   status: ReportStatus;
   summary: string;
   driveUrl?: string;

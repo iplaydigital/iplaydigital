@@ -4,7 +4,7 @@ import React, { useMemo } from "react";
 import {
   Bell, Bot, CalendarDays, ChevronDown, Columns3, Command, FileBarChart2, KeyRound, LayoutDashboard,
   LogOut, MessageSquare, MonitorPlay, Plus, Search, Settings, ShieldCheck, Sparkles, Users, UserCog, Zap, Cloud,
-  Link2, UserCircle2,
+  Link2, UserCircle2, FolderKanban, Network,
 } from "lucide-react";
 import { useApp, type View } from "./providers";
 import { Dashboard } from "./dashboard";
@@ -18,6 +18,8 @@ import { ChatDock, ChatWorkspace } from "./chat-panel";
 import { ReportsView } from "./reports-view";
 import { StaffView } from "./staff-view";
 import { ProfileView } from "./profile-view";
+import { ProjectsView } from "./projects-view";
+import { OrgChartView } from "./org-chart";
 import { RoleDashboard } from "./role-dashboard";
 import { DbBanner } from "./db-status";
 import { EventModal, GlobalSearch, NewTaskModal, TaskDrawer } from "./task-ui";
@@ -44,6 +46,8 @@ const NAV: { group: string; items: NavItem[] }[] = [
     group: "บริหารองค์กร",
     items: [
       { key: "staff", label: "พนักงาน & สิทธิ์", icon: <UserCog size={16} />, module: "staff" },
+      { key: "org", label: "ผังองค์กร", icon: <Network size={16} />, module: "staff" },
+      { key: "projects", label: "โปรเจกต์", icon: <FolderKanban size={16} />, module: "tasks" },
     ],
   },
   {
@@ -71,6 +75,8 @@ const TITLES: Record<View, { title: string; sub: string }> = {
   led: { title: "LED Wall", sub: "เชื่อมจอ Playwall Park Silom" },
   settings: { title: "ตั้งค่า", sub: "องค์กร · พนักงาน & สิทธิ์ · รายงาน & Drive · ฐานข้อมูล" },
   profile: { title: "โปรไฟล์ของฉัน", sub: "ช่องทางเข้าสู่ระบบ · Google / LINE · Google Drive ของคุณ" },
+  projects: { title: "บริหารจัดการโปรเจกต์", sub: "สร้าง/แก้ไข/ลบโปรเจกต์ · งบประมาณ · ความคืบหน้า · ทีมงาน" },
+  org: { title: "ผังองค์กร", sub: "โครงสร้างทีมจากแผนกถึงรายบุคคล · รูปพนักงานจาก LINE หรืออัปโหลดเอง" },
 };
 
 export function Shell() {
@@ -224,6 +230,8 @@ export function Shell() {
               {view === "led" && <LedView />}
               {view === "settings" && <SettingsView />}
               {view === "profile" && <ProfileView />}
+              {view === "projects" && <ProjectsView />}
+              {view === "org" && <OrgChartView />}
             </>
           )}
         </div>

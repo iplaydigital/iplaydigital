@@ -256,6 +256,10 @@ CREATE TABLE IF NOT EXISTS ws_users (
   drive_refresh_token TEXT         NULL,
   drive_email         VARCHAR(190) NULL,
   drive_connected_at  VARCHAR(32)  NULL,
+  -- รูปโปรไฟล์ + หัวหน้าโดยตรง (ผังองค์กร)
+  avatar              MEDIUMTEXT   NULL,
+  avatar_source       VARCHAR(16)  NULL,
+  manager_id          VARCHAR(32)  NULL,
   created_at    VARCHAR(32)  NOT NULL,
   last_login_at VARCHAR(32)  NULL,
   KEY idx_ws_users_role (role)
@@ -335,5 +339,29 @@ CREATE TABLE IF NOT EXISTS ws_login_logs (
 CREATE TABLE IF NOT EXISTS ws_oauth (
   id         VARCHAR(32) PRIMARY KEY,
   data       JSON NULL,
+  updated_at VARCHAR(32) NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ═══════════════════════════════════════════════════════════════
+--  ตั้งค่า AI แต่ละตัว (API / ค่าใช้จ่าย / การทำงานในแชท)
+-- ═══════════════════════════════════════════════════════════════
+CREATE TABLE IF NOT EXISTS ws_ai_agents (
+  id         VARCHAR(40) PRIMARY KEY,
+  name       VARCHAR(80) NOT NULL,
+  role       VARCHAR(160) NOT NULL DEFAULT '',
+  provider   VARCHAR(24) NOT NULL DEFAULT 'local',
+  base_url   VARCHAR(255) NULL,
+  model      VARCHAR(120) NULL,
+  api_key    TEXT NULL,
+  temperature DECIMAL(4,2) NOT NULL DEFAULT 0.40,
+  max_tokens INT NOT NULL DEFAULT 1200,
+  system_prompt TEXT NULL,
+  cost_in    DECIMAL(10,4) NOT NULL DEFAULT 0,
+  cost_out   DECIMAL(10,4) NOT NULL DEFAULT 0,
+  budget     DECIMAL(12,2) NOT NULL DEFAULT 0,
+  tokens_month BIGINT NOT NULL DEFAULT 0,
+  cost_month DECIMAL(12,4) NOT NULL DEFAULT 0,
+  chat_enabled TINYINT(1) NOT NULL DEFAULT 1,
+  auto_reply TINYINT(1) NOT NULL DEFAULT 1,
   updated_at VARCHAR(32) NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
