@@ -131,18 +131,6 @@ export function LoginForm({ googleReady, lineReady }: { googleReady: boolean; li
         </a>
       </div>
 
-      <div className="login-hint">
-        <b>บัญชีเริ่มต้น (เปลี่ยนรหัสผ่านทันทีหลังเข้าใช้)</b>
-        <div><code>oak@playdigital.co.th</code> · ทีมบริหาร</div>
-        <div><code>jimm@playdigital.co.th</code> · CTO</div>
-        <div><code>it@playdigital.co.th</code> · Support</div>
-        <div><code>ploy@playdigital.co.th</code> · Manager</div>
-        <div><code>nan@playdigital.co.th</code> · User</div>
-        <div className="tiny muted">รหัสผ่านเริ่มต้น: <code>iplay@2026</code> (หรือค่าจาก <code>ADMIN_INITIAL_PASSWORD</code>)</div>
-        <div className="tiny muted" style={{ marginTop: 6 }}>
-          ใช้ได้ทั้งอีเมลบริษัทและ <code>@gmail.com</code> · ต้องการผูก LINE เพิ่ม? เข้าใช้แล้วไปที่ <b>โปรไฟล์ → เชื่อมต่อช่องทาง</b>
-        </div>
-      </div>
     </>
   );
 }
