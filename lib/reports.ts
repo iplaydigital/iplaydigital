@@ -92,9 +92,11 @@ async function mariaReady(): Promise<boolean> {
       summary    TEXT NULL,
       drive_url  TEXT NULL,
       attachments JSON NULL,
+      author_name VARCHAR(160) NULL,
       created_at VARCHAR(32) NOT NULL,
       updated_at VARCHAR(32) NOT NULL
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
+    await p.query("ALTER TABLE ws_reports ADD COLUMN author_name VARCHAR(160) NULL").catch(() => undefined);
     return true;
   } catch {
     return false;
@@ -111,6 +113,7 @@ function rowToReport(r: Record<string, unknown>): Report {
   return {
     id: String(r.id), code: String(r.code), title: String(r.title), period: String(r.period),
     projectId: (r.project_id as string | null) ?? null, authorId: String(r.author_id),
+    authorName: (r.author_name as string | null) ?? undefined,
     status: r.status as ReportStatus, summary: String(r.summary ?? ""),
     driveUrl: (r.drive_url as string | null) ?? undefined, attachments: Array.isArray(att) ? att : [],
     createdAt: String(r.created_at), updatedAt: String(r.updated_at),
@@ -148,6 +151,7 @@ export async function createReport(input: Partial<Report> & { title: string; aut
     period: input.period || month(0),
     projectId: input.projectId ?? null,
     authorId: input.authorId,
+    authorName: input.authorName,
     status: input.status || "draft",
     summary: input.summary || "",
     driveUrl: input.driveUrl || "",
@@ -193,16 +197,16 @@ async function persist(report: Report, insert: boolean) {
       const p = pool();
       if (insert) {
         await p.query(
-          `INSERT INTO ws_reports (id,code,title,period,project_id,author_id,status,summary,drive_url,attachments,created_at,updated_at)
-           VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
+          `INSERT INTO ws_reports (id,code,title,period,project_id,author_id,author_name,status,summary,drive_url,attachments,created_at,updated_at)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
           [report.id, report.code, report.title, report.period, report.projectId ?? null, report.authorId,
-            report.status, report.summary, report.driveUrl || null, JSON.stringify(report.attachments),
+            report.authorName ?? null, report.status, report.summary, report.driveUrl || null, JSON.stringify(report.attachments),
             report.createdAt, report.updatedAt],
         );
       } else {
         await p.query(
-          `UPDATE ws_reports SET title=?, period=?, project_id=?, status=?, summary=?, drive_url=?, attachments=?, updated_at=? WHERE id=?`,
-          [report.title, report.period, report.projectId ?? null, report.status, report.summary,
+          `UPDATE ws_reports SET title=?, period=?, project_id=?, author_name=?, status=?, summary=?, drive_url=?, attachments=?, updated_at=? WHERE id=?`,
+          [report.title, report.period, report.projectId ?? null, report.authorName ?? null, report.status, report.summary,
             report.driveUrl || null, JSON.stringify(report.attachments), report.updatedAt, report.id],
         );
       }

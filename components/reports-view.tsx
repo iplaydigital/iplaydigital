@@ -55,6 +55,8 @@ export function ReportsView() {
   } | null>(null);
 
   const manager = me?.role === "admin" || me?.role === "support";
+  // เจ้าของรายงานอาจถูกเก็บเป็น memberId (u_xxx) หรือ userId (usr_xxx) — ต้องตรงทั้งคู่
+  const mineOf = (r: Report) => Boolean(me && (r.authorId === me.id || r.authorId === me.memberId));
 
   const load = React.useCallback(async () => {
     setLoading(true);
@@ -143,6 +145,7 @@ export function ReportsView() {
     }
     toast("ลบรายงานแล้ว", "info");
     await load();
+    void refresh();
   };
 
   const setStatus = async (r: Report, status: ReportStatus) => {
@@ -245,7 +248,7 @@ export function ReportsView() {
               const author = data?.members.find((m) => m.id === r.authorId);
               const project = data?.projects.find((p) => p.id === r.projectId);
               const meta = STATUS_META[r.status];
-              const canEdit = manager || r.authorId === me?.id;
+              const canEdit = manager || mineOf(r);
               return (
                 <article key={r.id} className="report-card">
                   <div className="rp-top">
@@ -257,7 +260,7 @@ export function ReportsView() {
                   <h3>{r.title}</h3>
                   <p>{r.summary || "— ยังไม่มีสรุป —"}</p>
                   <div className="rp-foot">
-                    <span className="tiny muted">โดย {author?.name ?? "—"} · งวด {r.period}</span>
+                    <span className="tiny muted">โดย {author?.name ?? r.authorName ?? "—"} · งวด {r.period}</span>
                     <div className="row" style={{ gap: 6 }}>
                       {r.attachments.map((a) => (
                         <a key={a.id} className="pill soft-link" href={a.url} target="_blank" rel="noreferrer" title={a.url}>

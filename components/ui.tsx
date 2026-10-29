@@ -10,8 +10,20 @@ import { PRIORITY_META, STATUS_META, cls, textOn } from "../lib/utils";
 
 export function Avatar({
   member, size = "md", title,
-}: { member?: Member | null; size?: "sm" | "md" | "lg"; title?: string }) {
+}: { member?: (Member & { avatar?: string | null }) | null; size?: "sm" | "md" | "lg"; title?: string }) {
   if (!member) return <span className={cls("avatar", size)} style={{ background: "var(--panel-3)" }}>?</span>;
+  if (member.avatar) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        className={cls("avatar", size)}
+        src={member.avatar}
+        alt={member.name}
+        title={title ?? `${member.name} · ${member.role}`}
+        style={{ objectFit: "cover" }}
+      />
+    );
+  }
   return (
     <span
       className={cls("avatar", size, member.kind === "ai" && "ai")}

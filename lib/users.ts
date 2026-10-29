@@ -26,6 +26,12 @@ export interface User extends SessionUser {
   driveRefreshToken?: string | null;
   driveEmail?: string | null;
   driveConnectedAt?: string | null;
+  /** รูปโปรไฟล์ (data URL หรือลิงก์) — ใช้ในผังองค์กร/ทะเบียนพนักงาน */
+  avatar?: string | null;
+  /** หัวหน้าที่ตรงกับผู้ใช้คนนี้ (ใช้สร้างผังองค์กร) */
+  managerId?: string | null;
+  /** ที่มาของรูป: upload | line | google | null */
+  avatarSource?: string | null;
 }
 
 const FILE = path.join(process.cwd(), ".data", "users.json");
@@ -99,6 +105,9 @@ async function ensureUsersTable() {
     "ALTER TABLE ws_users ADD COLUMN drive_refresh_token TEXT NULL",
     "ALTER TABLE ws_users ADD COLUMN drive_email VARCHAR(190) NULL",
     "ALTER TABLE ws_users ADD COLUMN drive_connected_at VARCHAR(32) NULL",
+    "ALTER TABLE ws_users ADD COLUMN avatar MEDIUMTEXT NULL",
+    "ALTER TABLE ws_users ADD COLUMN avatar_source VARCHAR(16) NULL",
+    "ALTER TABLE ws_users ADD COLUMN manager_id VARCHAR(32) NULL",
   ];
   for (const sql of alters) {
     try {
@@ -183,6 +192,7 @@ export function toClient(u: User): SessionUser {
   const hasGoogle = Boolean(u.googleEmail || u.googleConnectedAt);
   return {
     ...rest,
+    avatar: u.avatar ?? null,
     isSuper: u.role === "admin" && superAdminEmails().includes(u.email.toLowerCase()),
     linked: {
       google: hasGoogle,
@@ -404,6 +414,9 @@ function rowToUser(r: Record<string, unknown>): User {
     driveRefreshToken: (r.drive_refresh_token as string | null) ?? null,
     driveEmail: (r.drive_email as string | null) ?? null,
     driveConnectedAt: (r.drive_connected_at as string | null) ?? null,
+    avatar: (r.avatar as string | null) ?? null,
+    avatarSource: (r.avatar_source as string | null) ?? null,
+    managerId: (r.manager_id as string | null) ?? null,
   };
 }
 
@@ -496,7 +509,7 @@ export async function updateUser(
         `UPDATE ws_users SET email=?, name=?, nickname=?, role=?, provider=?, password_hash=?, color=?, initials=?,
            active=?, position=?, job_title=?, level=?, dept_id=?, team_id=?, extra_modules=?, member_id=?, updated_at=?, last_login_at=?,
            google_sub=?, google_email=?, google_connected_at=?, line_user_id=?, line_display=?, line_picture=?, line_linked_at=?,
-           drive_refresh_token=?, drive_email=?, drive_connected_at=?
+           drive_refresh_token=?, drive_email=?, drive_connected_at=?, avatar=?, avatar_source=?, manager_id=?
          WHERE id=?`,
         [next.email, next.name, next.nickname, next.role, next.provider, next.passwordHash ?? null, next.color,
           next.initials, next.active ? 1 : 0, next.position ?? "", next.jobTitle ?? "", next.level ?? "",
@@ -505,6 +518,7 @@ export async function updateUser(
           next.googleSub ?? null, next.googleEmail ?? null, next.googleConnectedAt ?? null,
           next.lineUserId ?? null, next.lineDisplay ?? null, next.linePicture ?? null, next.lineLinkedAt ?? null,
           next.driveRefreshToken ?? null, next.driveEmail ?? null, next.driveConnectedAt ?? null,
+          next.avatar ?? null, next.avatarSource ?? null, next.managerId ?? null,
           next.id],
       );
       if (!opts?.silent) await auditUserChanges(current, next, opts);
@@ -592,15 +606,17 @@ async function persistUser(user: User, insert: boolean) {
       if (insert) {
         await p.query(
           `INSERT INTO ws_users (id,email,name,nickname,role,provider,password_hash,color,initials,active,position,job_title,level,dept_id,team_id,extra_modules,member_id,created_at,updated_at,last_login_at,
-             google_sub,google_email,google_connected_at,line_user_id,line_display,line_picture,line_linked_at,drive_refresh_token,drive_email,drive_connected_at)
-           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+             google_sub,google_email,google_connected_at,line_user_id,line_display,line_picture,line_linked_at,drive_refresh_token,drive_email,drive_connected_at,
+             avatar,avatar_source,manager_id)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
           [user.id, user.email, user.name, user.nickname, user.role, user.provider, user.passwordHash ?? null,
             user.color, user.initials, user.active ? 1 : 0, user.position ?? "", user.jobTitle ?? "",
             user.level ?? "", user.departmentId ?? null, user.teamId ?? null, JSON.stringify(user.extraModules ?? []),
             user.memberId ?? null, user.createdAt, user.updatedAt ?? null, user.lastLoginAt ?? null,
             user.googleSub ?? null, user.googleEmail ?? null, user.googleConnectedAt ?? null,
             user.lineUserId ?? null, user.lineDisplay ?? null, user.linePicture ?? null, user.lineLinkedAt ?? null,
-            user.driveRefreshToken ?? null, user.driveEmail ?? null, user.driveConnectedAt ?? null],
+            user.driveRefreshToken ?? null, user.driveEmail ?? null, user.driveConnectedAt ?? null,
+            user.avatar ?? null, user.avatarSource ?? null, user.managerId ?? null],
         );
         return;
       }

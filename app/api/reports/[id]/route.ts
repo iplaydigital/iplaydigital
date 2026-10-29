@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { isManager, requireModule } from "../../../../lib/auth";
+import { isApprover, isManager, requireModule } from "../../../../lib/auth";
 import { deleteReport, getReport, updateReport } from "../../../../lib/reports";
 
 export const dynamic = "force-dynamic";
@@ -18,6 +18,9 @@ export async function PATCH(req: Request, { params }: Params) {
   }
 
   const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
+  if (body.status === "approved" && !isApprover(user)) {
+    return NextResponse.json({ error: "เฉพาะหัวหน้า/ผู้บริหารเท่านั้นที่อนุมัติรายงานได้" }, { status: 403 });
+  }
   const patch: Parameters<typeof updateReport>[1] = {};
   for (const key of ["title", "period", "summary", "driveUrl", "status", "projectId", "attachments"] as const) {
     if (body[key] !== undefined) (patch as Record<string, unknown>)[key] = body[key];

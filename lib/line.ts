@@ -202,6 +202,21 @@ export async function pushInbox(msg: LineInboxMessage): Promise<LineInboxMessage
   return msg;
 }
 
+/** ดึงรูปโปรไฟล์ (URL ของ LINE CDN) มาเก็บเป็น data URL เพื่อใช้ในระบบ */
+export async function imageUrlAsDataUrl(url: string, maxBytes = 2 * 1024 * 1024): Promise<string | null> {
+  try {
+    const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
+    if (!res.ok) return null;
+    const type = (res.headers.get("content-type") || "image/jpeg").split(";")[0];
+    if (!type.startsWith("image/")) return null;
+    const buf = Buffer.from(await res.arrayBuffer());
+    if (buf.byteLength > maxBytes) return null;
+    return `data:${type};base64,${buf.toString("base64")}`;
+  } catch {
+    return null;
+  }
+}
+
 export function newInboxId() {
   return `lm_${crypto.randomBytes(5).toString("hex")}`;
 }
