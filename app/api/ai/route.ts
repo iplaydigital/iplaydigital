@@ -2,11 +2,15 @@ import { NextResponse } from "next/server";
 import { getBootstrap } from "../../../lib/store";
 import { aiReply } from "../../../lib/ai";
 import { requireUser } from "../../../lib/auth";
-import { getAgentConfig, recordAgentUsage, type AgentConfig } from "../../../lib/ai-agents";
+import { getAgentConfig, saveAgentConfig, type AgentConfig } from "../../../lib/ai-agents";
+import { pickKey, recordKeyUsage } from "../../../lib/ai-pool";
+import { getModelInfo, priceFor } from "../../../lib/ai-models";
+import { recordUsage } from "../../../lib/ai-usage";
+import { describeSkills, listSkills } from "../../../lib/ai-skills";
 
 export const dynamic = "force-dynamic";
 
-interface ChatResult {
+interface RemoteResult {
   reply: string;
   tokensIn: number;
   tokensOut: number;
@@ -14,17 +18,16 @@ interface ChatResult {
 }
 
 /**
- * AI agent reply engine (ใช้ค่าจากหน้าตั้งค่า AI ของแต่ละตัว)
- *  1) local            → rule/context engine ในตัว (ฟรี)
- *  2) gateway          → AI_GATEWAY_URL + AI_GATEWAY_KEY จาก env
- *  3) openai / custom  → /chat/completions (OpenAI-compatible)
- *  4) anthropic        → /messages
- *  5) google           → :generateContent
- * ถ้าติดต่อไม่ได้หรือยังไม่ตั้ง key → ถอยไปใช้ engine ในตัวพร้อมแจ้งเหตุผล
+ * AI agent reply engine
+ *  - ใช้ API pool: เลือกคีย์ที่ยังมีโควต้า → ถ้าหมดสลับเส้นถัดไปอัตโนมัติ
+ *    ถ้าทุกเส้นหมด → สถานะ “รอรีเซ็ต” พร้อมบอกเวลาที่จะใช้ได้
+ *  - บันทึก token/ค่าใช้จ่ายลง usage log + ลดโควต้าคีย์
+ *  - ผูก skill / plugin / MCP ของ agent เข้ากับ system prompt
  */
 export async function POST(req: Request) {
   const { error } = await requireUser();
   if (error) return error;
+
   try {
     const { text, agentId } = (await req.json()) as { text: string; agentId?: string };
     const data = await getBootstrap();
@@ -44,40 +47,122 @@ export async function POST(req: Request) {
       });
     }
 
+    // ── engine ภายในระบบ (ฟรี) ──
+    if (!cfg || cfg.provider === "local") {
+      return NextResponse.json({ agentId: agent.id, reply: local.reply, suggestions: local.suggestions, source: "local" });
+    }
+
+    // ── ตรวจงบของ agent ──
+    if (cfg.budget > 0 && cfg.costMonth >= cfg.budget) {
+      return NextResponse.json({
+        agentId: agent.id,
+        reply: `${agent.name} ใช้งบเดือนนี้ครบแล้ว (${cfg.costMonth.toFixed(2)} / ${cfg.budget} บาท) — ปรับงบได้ที่หน้าตั้งค่า AI`,
+        suggestions: local.suggestions,
+        source: "budget",
+      });
+    }
+
+    // ── เลือกคีย์จาก pool (สลับอัตโนมัติ) ──
+    const pick = await pickKey(cfg.provider);
+    if (!pick.ok || !pick.key) {
+      // ยังไม่มีคีย์ใน pool = ยังไม่ได้ตั้งค่า → ตอบด้วย engine ภายในไปก่อน (ไม่ทำให้งานสะดุด)
+      if (pick.reason === "no_keys" || pick.reason === "all_disabled") {
+        return NextResponse.json({
+          agentId: agent.id,
+          reply: `${local.reply}\n\n(หมายเหตุ: ${cfg.provider} ยังไม่มี API key ที่ใช้งานได้ใน pool — ตอนนี้ใช้ engine ภายในระบบไปก่อน เพิ่มคีย์ได้ที่ AI Workforce → API Pool)`,
+          suggestions: local.suggestions,
+          source: "local-fallback",
+        });
+      }
+      const when = pick.nextResetAt ? new Date(pick.nextResetAt) : null;
+      return NextResponse.json({
+        agentId: agent.id,
+        reply:
+          `⏳ ${agent.name} รอโควต้า API อยู่ — ${pick.message}` +
+          (when ? `\nจะกลับมาใช้งานได้ประมาณ ${when.toLocaleString("th-TH", { timeZone: "Asia/Bangkok" })}` : "") +
+          `\nระหว่างนี้ยังใช้ engine ภายในระบบได้`,
+        suggestions: local.suggestions,
+        source: "quota",
+        nextResetAt: pick.nextResetAt ?? null,
+      });
+    }
+
+    const modelInfo = await getModelInfo(cfg.provider, cfg.model || pick.key.defaultModel || "");
+    const skills = await listSkills();
+    const skillText = describeSkills(
+      skills,
+      [...(cfg.skillIds ?? []), ...(cfg.pluginIds ?? [])],
+    );
+
+    const system = [
+      cfg.systemPrompt?.trim() || `คุณคือ ${agent.name} (${agent.role}) ของ iPlay Workspace ตอบภาษาไทย กระชับ ลงมือทำได้จริง`,
+      skillText ? `\nความสามารถที่เปิดใช้:\n${skillText}` : "",
+      cfg.mcpServerIds?.length ? `\nเครื่องมือภายนอก (MCP): ${cfg.mcpServerIds.join(", ")}` : "",
+    ]
+      .filter(Boolean)
+      .join("\n");
+
     const context = {
       tasks: data.tasks.filter((t) => t.status !== "done").slice(0, 30).map((t) => ({ code: t.code, title: t.title, status: t.status, due: t.due })),
       eventsToday: data.events.filter((e) => e.date === data.today).slice(0, 10),
       openTasks: data.tasks.filter((t) => t.status !== "done").length,
-      agents: data.members.filter((m) => m.kind === "ai").map((m) => m.name),
+      projects: data.projects.map((p) => ({ code: p.code, name: p.name, status: p.status, progress: p.progress })),
     };
 
-    const system =
-      cfg?.systemPrompt?.trim() ||
-      `คุณคือ ${agent.name} (${agent.role}) ของ iPlay Workspace ตอบภาษาไทย กระชับ ลงมือทำได้จริง`;
+    const remote = await callRemote(
+      { ...cfg, apiKey: pick.key.apiKey, baseUrl: pick.key.baseUrl || cfg.baseUrl },
+      system,
+      context,
+      text || "",
+    );
 
-    if (cfg && cfg.provider !== "local") {
-      const over = cfg.budget > 0 && cfg.costMonth >= cfg.budget;
-      if (over) {
-        return NextResponse.json({
-          agentId: agent.id,
-          reply: `${agent.name} ใช้งบเดือนนี้ครบแล้ว (${cfg.costMonth.toFixed(2)} / ${cfg.budget} บาท) — ปรับงบได้ที่หน้าตั้งค่า AI`,
-          suggestions: local.suggestions,
-          source: "budget",
-        });
-      }
-      const remote = await callRemote(cfg, system, context, text || "", local.reply);
-      if (remote) {
-        await recordAgentUsage(agent.id, remote.tokensIn, remote.tokensOut);
-        return NextResponse.json({
-          agentId: agent.id,
-          reply: remote.reply,
-          suggestions: local.suggestions,
-          source: remote.source,
-        });
-      }
+    if (!remote) {
+      // ผู้ให้บริการล่ม/คีย์ผิด → คืนคำตอบจาก engine ภายใน + บันทึกสถานะคีย์
+      await recordKeyUsage(pick.key.id, { tokensIn: 0, tokensOut: 0, requests: 1, ok: false, error: "provider error" });
+      return NextResponse.json({
+        agentId: agent.id,
+        reply: `${local.reply}\n\n(หมายเหตุ: เรียก ${cfg.provider} ไม่สำเร็จ ระบบสลับมาใช้ engine ภายในให้ก่อน)`,
+        suggestions: local.suggestions,
+        source: "local-fallback",
+      });
     }
 
-    return NextResponse.json({ agentId: agent.id, reply: local.reply, suggestions: local.suggestions, source: "local" });
+    // ── คิดค่าใช้จ่ายจริงจากราคาโมเดล ──
+    const cost = priceFor(modelInfo, remote.tokensIn, remote.tokensOut).thb;
+    await recordKeyUsage(pick.key.id, { tokensIn: remote.tokensIn, tokensOut: remote.tokensOut, requests: 1, ok: true });
+    await recordUsage({
+      agentId: agent.id,
+      agentName: agent.name,
+      provider: cfg.provider,
+      model: cfg.model || modelInfo.id,
+      keyId: pick.key.id,
+      keyLabel: pick.key.label,
+      tokensIn: remote.tokensIn,
+      tokensOut: remote.tokensOut,
+      costThb: cost,
+      source: remote.source,
+      projectId: cfg.projectIds?.[0] ?? null,
+      projectName: data.projects.find((p) => p.id === cfg.projectIds?.[0])?.name ?? null,
+      taskId: null,
+      ok: true,
+      error: null,
+    });
+
+    // อัปเดตยอดสะสมของ agent
+    await saveAgentConfig(agent.id, {
+      tokensMonth: cfg.tokensMonth + remote.tokensIn + remote.tokensOut,
+      costMonth: Number((cfg.costMonth + cost).toFixed(4)),
+      costIn: Number((modelInfo.priceIn * 36 / 1000).toFixed(4)),
+      costOut: Number((modelInfo.priceOut * 36 / 1000).toFixed(4)),
+    });
+
+    return NextResponse.json({
+      agentId: agent.id,
+      reply: remote.reply,
+      suggestions: local.suggestions,
+      source: remote.source,
+      usage: { tokensIn: remote.tokensIn, tokensOut: remote.tokensOut, costThb: cost, key: pick.key.label },
+    });
   } catch (err) {
     return NextResponse.json({ error: (err as Error).message }, { status: 500 });
   }
@@ -90,8 +175,7 @@ async function callRemote(
   system: string,
   context: unknown,
   message: string,
-  fallbackReply: string,
-): Promise<ChatResult | null> {
+): Promise<RemoteResult | null> {
   const userContent = `${message}\n\n[ข้อมูล Workspace]\n${JSON.stringify(context).slice(0, 6000)}`;
   try {
     // ── gateway ของบริษัท ──
@@ -176,7 +260,7 @@ async function callRemote(
       };
     }
 
-    // ── OpenAI-compatible (openai / custom) ──
+    // ── OpenAI-compatible ──
     const base = (cfg.baseUrl || "https://api.openai.com/v1").replace(/\/$/, "");
     const res = await fetch(`${base}/chat/completions`, {
       method: "POST",
@@ -207,7 +291,6 @@ async function callRemote(
     };
   } catch (e) {
     console.warn("[ai] remote call failed, fallback to local:", (e as Error).message);
-    void fallbackReply;
     return null;
   }
 }

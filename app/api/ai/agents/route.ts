@@ -63,6 +63,11 @@ export async function POST(req: Request) {
   if (body.budget !== undefined) patch.budget = Math.max(0, Number(body.budget) || 0);
   if (body.chatEnabled !== undefined) patch.chatEnabled = Boolean(body.chatEnabled);
   if (body.autoReply !== undefined) patch.autoReply = Boolean(body.autoReply);
+  if (Array.isArray(body.skillIds)) patch.skillIds = body.skillIds.map(String);
+  if (Array.isArray(body.pluginIds)) patch.pluginIds = body.pluginIds.map(String);
+  if (Array.isArray(body.mcpServerIds)) patch.mcpServerIds = body.mcpServerIds.map(String);
+  if (Array.isArray(body.projectIds)) patch.projectIds = body.projectIds.map(String);
+  if (typeof body.avatar === "string") patch.avatar = body.avatar || null;
 
   try {
     const saved = await saveAgentConfig(body.id, patch);
@@ -73,7 +78,7 @@ export async function POST(req: Request) {
       targetId: `ai:${saved.id}`,
       targetName: `AI Agent ${saved.name}`,
       action: "update",
-      note: `ตั้งค่า AI: ${saved.provider} · ${saved.model || "—"} · งบ ${saved.budget} บาท/เดือน · แชท${saved.chatEnabled ? "เปิด" : "ปิด"}`,
+      note: `ตั้งค่า AI: ${saved.provider} · ${saved.model || "—"} · งบ ${saved.budget} บาท/เดือน · แชท${saved.chatEnabled ? "เปิด" : "ปิด"} · skill ${saved.skillIds.length} · project ${saved.projectIds.length}`,
       ip: requestMeta(req).ip,
     });
     return NextResponse.json({ ok: true, agent: toPublic(saved) });
