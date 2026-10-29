@@ -8,16 +8,10 @@
 import fs from "fs";
 import path from "path";
 
-export type AiProvider = "local" | "openai" | "anthropic" | "google" | "custom" | "gateway";
+import { PROVIDERS, type AiProvider } from "./ai-shared";
 
-export const PROVIDERS: { key: AiProvider; label: string; baseUrl: string; model: string; hint: string }[] = [
-  { key: "local", label: "ในระบบ (rule engine)", baseUrl: "", model: "", hint: "ใช้ข้อมูล Workspace ตอบเอง ไม่มีค่าใช้จ่าย" },
-  { key: "openai", label: "OpenAI", baseUrl: "https://api.openai.com/v1", model: "gpt-4.1-mini", hint: "ราคาอ้างอิง USD→บาท ตั้งได้เอง" },
-  { key: "anthropic", label: "Anthropic Claude", baseUrl: "https://api.anthropic.com/v1", model: "claude-sonnet-4-5", hint: "ใช้ /v1/messages" },
-  { key: "google", label: "Google Gemini", baseUrl: "https://generativelanguage.googleapis.com/v1beta", model: "gemini-2.5-flash", hint: "ใส่ API key ใน query" },
-  { key: "custom", label: "OpenAI-compatible (อื่น ๆ)", baseUrl: "", model: "", hint: "เช่น OpenRouter, Typhoon, Ollama, vLLM" },
-  { key: "gateway", label: "AI Gateway ของบริษัท", baseUrl: "", model: "", hint: "ใช้ AI_GATEWAY_URL + AI_GATEWAY_KEY จาก env" },
-];
+export { PROVIDERS };
+export type { AiProvider };
 
 export interface AgentConfig {
   id: string;
@@ -40,6 +34,16 @@ export interface AgentConfig {
   costMonth: number;
   chatEnabled: boolean;
   autoReply: boolean;
+  /** คลัง skill ที่ผูกกับ AI ตัวนี้ */
+  skillIds: string[];
+  /** plugin (ส่วนขยาย/MCP) ที่ผูกไว้ */
+  pluginIds: string[];
+  /** MCP server ที่อนุญาตให้เรียกใช้ */
+  mcpServerIds: string[];
+  /** รูปของ AI (data URL / gradient preset) */
+  avatar: string | null;
+  /** โปรเจกต์ที่ AI ตัวนี้ทำงานให้ */
+  projectIds: string[];
   updatedAt: string | null;
 }
 
@@ -54,35 +58,40 @@ const SEED: AgentConfig[] = [
     provider: "anthropic", baseUrl: "https://api.anthropic.com/v1", model: "claude-sonnet-4-5",
     apiKey: "", temperature: 0.4, maxTokens: 1200,
     systemPrompt: "คุณคือ NOVA ผู้ประสานงานโปรเจกต์ของ iPlay Digital ตอบภาษาไทย กระชับ ลงมือทำได้จริง และสรุปเป็นข้อ ๆ",
-    costIn: 0.12, costOut: 0.36, budget: 1500, tokensMonth: 0, costMonth: 0, chatEnabled: true, autoReply: true, updatedAt: null,
+    costIn: 0.12, costOut: 0.36, budget: 1500, tokensMonth: 0, costMonth: 0, chatEnabled: true, autoReply: true,
+    skillIds: ["sk_summary", "sk_qa"], pluginIds: ["pl_drive"], mcpServerIds: ["mcp_drive"], avatar: null, projectIds: ["p_erp", "p_crm"], updatedAt: null,
   },
   {
     id: "ai_pixel", name: "PIXEL", role: "AI Creative Designer",
     provider: "openai", baseUrl: "https://api.openai.com/v1", model: "gpt-4.1-mini",
     apiKey: "", temperature: 0.8, maxTokens: 1000,
     systemPrompt: "คุณคือ PIXEL ดีไซเนอร์ครีเอทีฟ ตอบเรื่อง key visual, layout, social size และแนวคิดภาพ",
-    costIn: 0.06, costOut: 0.18, budget: 800, tokensMonth: 0, costMonth: 0, chatEnabled: true, autoReply: true, updatedAt: null,
+    costIn: 0.06, costOut: 0.18, budget: 800, tokensMonth: 0, costMonth: 0, chatEnabled: true, autoReply: true,
+    skillIds: ["sk_content"], pluginIds: [], mcpServerIds: [], avatar: null, projectIds: ["p_playwall", "p_mv"], updatedAt: null,
   },
   {
     id: "ai_byte", name: "BYTE", role: "AI Full-stack Engineer",
     provider: "custom", baseUrl: "", model: "claude-code",
     apiKey: "", temperature: 0.2, maxTokens: 2000,
     systemPrompt: "คุณคือ BYTE วิศวกรฟูลสแตก ตอบเป็นขั้นตอน พร้อมโค้ดสั้น ๆ ที่ใช้งานได้จริง",
-    costIn: 0.1, costOut: 0.3, budget: 2000, tokensMonth: 0, costMonth: 0, chatEnabled: true, autoReply: true, updatedAt: null,
+    costIn: 0.1, costOut: 0.3, budget: 2000, tokensMonth: 0, costMonth: 0, chatEnabled: true, autoReply: true,
+    skillIds: ["sk_node_run"], pluginIds: ["pl_drive"], mcpServerIds: ["mcp_drive"], avatar: null, projectIds: ["p_erp", "p_web"], updatedAt: null,
   },
   {
     id: "ai_echo", name: "ECHO", role: "AI Comms & QA",
     provider: "google", baseUrl: "https://generativelanguage.googleapis.com/v1beta", model: "gemini-2.5-flash",
     apiKey: "", temperature: 0.5, maxTokens: 900,
     systemPrompt: "คุณคือ ECHO ตรวจข้อความและตอบลูกค้า ภาษาไทยสุภาพ กระชับ",
-    costIn: 0.02, costOut: 0.06, budget: 500, tokensMonth: 0, costMonth: 0, chatEnabled: true, autoReply: true, updatedAt: null,
+    costIn: 0.02, costOut: 0.06, budget: 500, tokensMonth: 0, costMonth: 0, chatEnabled: true, autoReply: true,
+    skillIds: ["sk_qa", "pl_line"], pluginIds: ["pl_line"], mcpServerIds: [], avatar: null, projectIds: [], updatedAt: null,
   },
   {
     id: "ai_orbit", name: "ORBIT", role: "AI Data Analyst",
     provider: "local", baseUrl: "", model: "rule-engine",
     apiKey: "", temperature: 0.3, maxTokens: 1000,
     systemPrompt: "คุณคือ ORBIT นักวิเคราะห์ข้อมูล สรุปตัวเลขและข้อเสนอแนะ",
-    costIn: 0, costOut: 0, budget: 0, tokensMonth: 0, costMonth: 0, chatEnabled: true, autoReply: false, updatedAt: null,
+    costIn: 0, costOut: 0, budget: 0, tokensMonth: 0, costMonth: 0, chatEnabled: true, autoReply: false,
+    skillIds: ["sk_analyze", "sk_python_report"], pluginIds: [], mcpServerIds: [], avatar: null, projectIds: ["p_crm"], updatedAt: null,
   },
 ];
 
@@ -103,9 +112,20 @@ function readFile(): AgentConfig[] {
   return g.__ipwAgents;
 }
 
+const ARRAY_FIELDS = ["skillIds", "pluginIds", "mcpServerIds", "projectIds"] as const;
+
+function withDefaults(cfg: AgentConfig): AgentConfig {
+  const out: AgentConfig = { ...cfg };
+  for (const f of ARRAY_FIELDS) {
+    if (!Array.isArray(out[f])) (out as unknown as Record<string, unknown>)[f] = [];
+  }
+  if (out.avatar === undefined) out.avatar = null;
+  return out;
+}
+
 function mergeWithSeed(rows: AgentConfig[]): AgentConfig[] {
-  const byId = new Map(rows.map((r) => [r.id, r]));
-  return SEED.map((s) => ({ ...s, ...(byId.get(s.id) ?? {}) }));
+  const byId = new Map(rows.map((r) => [r.id, withDefaults(r)]));
+  return SEED.map((s) => withDefaults({ ...s, ...(byId.get(s.id) ?? {}) }));
 }
 
 function writeFile(rows: AgentConfig[]) {
@@ -142,8 +162,18 @@ async function maria() {
       cost_month DECIMAL(12,4) NOT NULL DEFAULT 0,
       chat_enabled TINYINT(1) NOT NULL DEFAULT 1,
       auto_reply TINYINT(1) NOT NULL DEFAULT 1,
+      skill_ids JSON NULL,
+      plugin_ids JSON NULL,
+      mcp_ids JSON NULL,
+      avatar MEDIUMTEXT NULL,
+      project_ids JSON NULL,
       updated_at VARCHAR(32) NULL
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
+    await p.query("ALTER TABLE ws_ai_agents ADD COLUMN skill_ids JSON NULL").catch(() => undefined);
+    await p.query("ALTER TABLE ws_ai_agents ADD COLUMN plugin_ids JSON NULL").catch(() => undefined);
+    await p.query("ALTER TABLE ws_ai_agents ADD COLUMN mcp_ids JSON NULL").catch(() => undefined);
+    await p.query("ALTER TABLE ws_ai_agents ADD COLUMN avatar MEDIUMTEXT NULL").catch(() => undefined);
+    await p.query("ALTER TABLE ws_ai_agents ADD COLUMN project_ids JSON NULL").catch(() => undefined);
     return p;
   } catch {
     return null;
@@ -169,8 +199,23 @@ function rowToConfig(r: Record<string, unknown>): AgentConfig {
     costMonth: Number(r.cost_month ?? 0),
     chatEnabled: !!r.chat_enabled,
     autoReply: !!r.auto_reply,
+    skillIds: parseArray(r.skill_ids),
+    pluginIds: parseArray(r.plugin_ids),
+    mcpServerIds: parseArray(r.mcp_ids),
+    avatar: (r.avatar as string | null) ?? null,
+    projectIds: parseArray(r.project_ids),
     updatedAt: (r.updated_at as string | null) ?? null,
   };
+}
+
+function parseArray(v: unknown): string[] {
+  if (Array.isArray(v)) return v.map(String);
+  try {
+    const out = typeof v === "string" ? JSON.parse(v) : [];
+    return Array.isArray(out) ? out.map(String) : [];
+  } catch {
+    return [];
+  }
 }
 
 export async function listAgentConfigs(): Promise<AgentConfig[]> {
@@ -181,7 +226,7 @@ export async function listAgentConfigs(): Promise<AgentConfig[]> {
       const stored = rows.map(rowToConfig);
       const merged = SEED.map((s) => {
         const hit = stored.find((x) => x.id === s.id);
-        return hit ? { ...s, ...hit, name: hit.name || s.name, role: hit.role || s.role } : s;
+        return withDefaults(hit ? { ...s, ...hit, name: hit.name || s.name, role: hit.role || s.role } : s);
       });
       const extra = stored.filter((x) => !SEED.some((s) => s.id === x.id));
       const all = [...merged, ...extra];
@@ -208,26 +253,30 @@ export async function saveAgentConfig(id: string, patch: Partial<AgentConfig>): 
   const all = await listAgentConfigs();
   const current = all.find((a) => a.id === id) ?? SEED.find((s) => s.id === id);
   if (!current) throw new Error("ไม่พบ AI agent นี้");
-  const next: AgentConfig = {
+  const next: AgentConfig = withDefaults({
     ...current,
     ...Object.fromEntries(Object.entries(patch).filter(([, v]) => v !== undefined)),
     id,
     updatedAt: new Date().toISOString(),
-  } as AgentConfig;
+  } as AgentConfig);
 
   const p = await maria();
   if (p) {
     await p.query(
       `INSERT INTO ws_ai_agents (id,name,role,provider,base_url,model,api_key,temperature,max_tokens,system_prompt,
-         cost_in,cost_out,budget,tokens_month,cost_month,chat_enabled,auto_reply,updated_at)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+         cost_in,cost_out,budget,tokens_month,cost_month,chat_enabled,auto_reply,skill_ids,plugin_ids,mcp_ids,avatar,project_ids,updated_at)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
        ON DUPLICATE KEY UPDATE name=VALUES(name), role=VALUES(role), provider=VALUES(provider), base_url=VALUES(base_url),
          model=VALUES(model), api_key=VALUES(api_key), temperature=VALUES(temperature), max_tokens=VALUES(max_tokens),
          system_prompt=VALUES(system_prompt), cost_in=VALUES(cost_in), cost_out=VALUES(cost_out), budget=VALUES(budget),
-         chat_enabled=VALUES(chat_enabled), auto_reply=VALUES(auto_reply), updated_at=VALUES(updated_at)`,
+         chat_enabled=VALUES(chat_enabled), auto_reply=VALUES(auto_reply), skill_ids=VALUES(skill_ids),
+         plugin_ids=VALUES(plugin_ids), mcp_ids=VALUES(mcp_ids), avatar=VALUES(avatar), project_ids=VALUES(project_ids),
+         updated_at=VALUES(updated_at)`,
       [next.id, next.name, next.role, next.provider, next.baseUrl || null, next.model || null, next.apiKey || null,
         next.temperature, next.maxTokens, next.systemPrompt || null, next.costIn, next.costOut, next.budget,
-        next.tokensMonth, next.costMonth, next.chatEnabled ? 1 : 0, next.autoReply ? 1 : 0, next.updatedAt],
+        next.tokensMonth, next.costMonth, next.chatEnabled ? 1 : 0, next.autoReply ? 1 : 0,
+        JSON.stringify(next.skillIds ?? []), JSON.stringify(next.pluginIds ?? []), JSON.stringify(next.mcpServerIds ?? []),
+        next.avatar ?? null, JSON.stringify(next.projectIds ?? []), next.updatedAt],
     );
     g.__ipwAgents = all.map((a) => (a.id === id ? next : a));
     return next;
