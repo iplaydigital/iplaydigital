@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { isApprover, isManager, requireModule } from "../../../../lib/auth";
+import { canEditReport, canManageReports, isApprover, requireModule } from "../../../../lib/auth";
 import { deleteReport, getReport, updateReport } from "../../../../lib/reports";
 
 export const dynamic = "force-dynamic";
@@ -13,12 +13,14 @@ export async function PATCH(req: Request, { params }: Params) {
 
   const current = await getReport(id);
   if (!current) return NextResponse.json({ error: "ไม่พบรายงาน" }, { status: 404 });
-  if (current.authorId !== user.id && current.authorId !== user.memberId && !isManager(user)) {
-    return NextResponse.json({ error: "แก้ไขได้เฉพาะรายงานของตนเอง (หรือ Admin/Support)" }, { status: 403 });
+  if (!canEditReport(user, current)) {
+    return NextResponse.json({ error: "แก้ไขได้เฉพาะรายงานของตนเอง หรือผู้จัดการขึ้นไป (Manager / Admin / Support)" }, { status: 403 });
   }
 
   const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
-  if (body.status === "approved" && !isApprover(user)) {
+  // เช็คเฉพาะตอน "เปลี่ยนเป็นอนุมัติ" — การแก้ฟิลด์อื่นในรายงานที่อนุมัติแล้วต้องทำได้
+  const promotesToApproved = body.status === "approved" && current.status !== "approved";
+  if (promotesToApproved && !isApprover(user) && !canManageReports(user)) {
     return NextResponse.json({ error: "เฉพาะหัวหน้า/ผู้บริหารเท่านั้นที่อนุมัติรายงานได้" }, { status: 403 });
   }
   const patch: Parameters<typeof updateReport>[1] = {};
@@ -35,8 +37,8 @@ export async function DELETE(_req: Request, { params }: Params) {
   if (error || !user) return error;
   const current = await getReport(id);
   if (!current) return NextResponse.json({ error: "ไม่พบรายงาน" }, { status: 404 });
-  if (current.authorId !== user.id && current.authorId !== user.memberId && !isManager(user)) {
-    return NextResponse.json({ error: "ลบได้เฉพาะรายงานของตนเอง (หรือ Admin/Support)" }, { status: 403 });
+  if (!canEditReport(user, current)) {
+    return NextResponse.json({ error: "ลบได้เฉพาะรายงานของตนเอง หรือผู้จัดการขึ้นไป (Manager / Admin / Support)" }, { status: 403 });
   }
   await deleteReport(id);
   return NextResponse.json({ ok: true });
