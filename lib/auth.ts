@@ -76,6 +76,34 @@ export function isManager(user: SessionUser | null | undefined): boolean {
   return user?.role === "admin" || user?.role === "support";
 }
 
+/** บทบาทที่จัดการรายงานของทีมได้ (Admin / Support / Manager) */
+export function canManageReports(user: SessionUser | null | undefined): boolean {
+  return roleScope(user?.role).manageStaff;
+}
+
+/**
+ * เป็นเจ้าของรายงานหรือไม่ — authorId อาจถูกเก็บเป็น id ผู้ใช้ (usr_*)
+ * หรือ memberId (u_*) จึงต้องเทียบทั้งคู่ และเผื่อกรณีข้อมูลเก่าที่เก็บเป็นชื่อ
+ */
+export function ownsReport(
+  user: SessionUser | null | undefined,
+  report: { authorId?: string | null; authorName?: string | null },
+): boolean {
+  if (!user) return false;
+  const author = String(report.authorId ?? "");
+  if (author && (author === user.id || author === user.memberId || author === user.email)) return true;
+  if (!author && report.authorName && report.authorName === user.name) return true;
+  return false;
+}
+
+/** แก้ไข/ลบรายงานได้ = เจ้าของ หรือ Admin / Support / Manager */
+export function canEditReport(
+  user: SessionUser | null | undefined,
+  report: { authorId?: string | null; authorName?: string | null },
+): boolean {
+  return ownsReport(user, report) || canManageReports(user);
+}
+
 /** หัวหน้า/ผู้บริหารที่อนุมัติได้ */
 export function isApprover(user: SessionUser | null | undefined): boolean {
   return roleScope(user?.role).approve;

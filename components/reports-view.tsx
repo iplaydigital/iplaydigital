@@ -45,6 +45,7 @@ export function ReportsView() {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [linkInput, setLinkInput] = useState("");
+  const [confirmDel, setConfirmDel] = useState<Report | null>(null);
   const [uploading, setUploading] = useState(false);
   const [drive, setDrive] = useState<{
     configured: boolean;
@@ -54,9 +55,17 @@ export function ReportsView() {
     needsUserConnect?: boolean;
   } | null>(null);
 
-  const manager = me?.role === "admin" || me?.role === "support";
-  // เจ้าของรายงานอาจถูกเก็บเป็น memberId (u_xxx) หรือ userId (usr_xxx) — ต้องตรงทั้งคู่
-  const mineOf = (r: Report) => Boolean(me && (r.authorId === me.id || r.authorId === me.memberId));
+  // Manager ขึ้นไปจัดการรายงานของทีมได้ (เดิมตัด role "manager" ออก ทำให้แก้/ลบไม่ได้)
+  const manager = me?.role === "admin" || me?.role === "support" || me?.role === "manager";
+  // เจ้าของรายงานอาจถูกเก็บเป็น memberId (u_xxx) หรือ userId (usr_xxx) — ต้องตรงทั้งคู่ (+ อีเมล/ชื่อ สำหรับข้อมูลเก่า)
+  const mineOf = (r: Report) => {
+    if (!me) return false;
+    const author = r.authorId ?? "";
+    if (author && (author === me.id || author === me.memberId || author === me.email)) return true;
+    if (!author && r.authorName && r.authorName === me.name) return true;
+    return false;
+  };
+  const canEditOf = (r: Report) => manager || mineOf(r);
 
   const load = React.useCallback(async () => {
     setLoading(true);
@@ -135,17 +144,22 @@ export function ReportsView() {
     }
   };
 
+  // ใช้ modal ยืนยันในแอป (window.confirm ถูกบล็อกในเว็บวิวของ LINE/Facebook ทำให้กดลบแล้วเงียบ)
   const remove = async (r: Report) => {
-    if (!window.confirm(`ลบรายงาน “${r.title}” ?`)) return;
-    const res = await fetch(`/api/reports/${r.id}`, { method: "DELETE" });
-    if (!res.ok) {
-      const b = (await res.json().catch(() => ({}))) as { error?: string };
-      toast(b.error || "ลบไม่สำเร็จ", "err");
-      return;
+    setBusy(true);
+    try {
+      const res = await fetch(`/api/reports/${r.id}`, { method: "DELETE" });
+      const b = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
+      if (!res.ok || b.ok === false) throw new Error(b.error || "ลบไม่สำเร็จ");
+      toast("ลบรายงานแล้ว", "ok");
+      setConfirmDel(null);
+      await load();
+      void refresh();
+    } catch (err) {
+      toast((err as Error).message, "err");
+    } finally {
+      setBusy(false);
     }
-    toast("ลบรายงานแล้ว", "info");
-    await load();
-    void refresh();
   };
 
   const setStatus = async (r: Report, status: ReportStatus) => {
@@ -248,7 +262,7 @@ export function ReportsView() {
               const author = data?.members.find((m) => m.id === r.authorId);
               const project = data?.projects.find((p) => p.id === r.projectId);
               const meta = STATUS_META[r.status];
-              const canEdit = manager || mineOf(r);
+              const canEdit = canEditOf(r);
               return (
                 <article key={r.id} className="report-card">
                   <div className="rp-top">
@@ -267,6 +281,9 @@ export function ReportsView() {
                           <Paperclip size={9} /> {a.name.length > 26 ? a.name.slice(0, 24) + "…" : a.name}
                         </a>
                       ))}
+                      {!canEdit && (
+                        <span className="pill" style={{ background: "var(--panel-2)", color: "var(--muted)" }}>อ่านเท่านั้น</span>
+                      )}
                       {canEdit && (
                         <>
                           {manager && r.status !== "approved" && (
@@ -275,7 +292,9 @@ export function ReportsView() {
                             </button>
                           )}
                           <button className="btn btn-sm" onClick={() => openEdit(r)}><Pencil size={12} /> แก้ไข</button>
-                          <button className="btn btn-sm" style={{ color: "var(--red)" }} onClick={() => void remove(r)}><Trash2 size={12} /></button>
+                          <button className="btn btn-sm" style={{ color: "var(--red)" }} onClick={() => setConfirmDel(r)} title="ลบรายงาน">
+                            <Trash2 size={12} /> ลบ
+                          </button>
                         </>
                       )}
                     </div>
@@ -286,6 +305,33 @@ export function ReportsView() {
           </div>
         </div>
       </div>
+
+      {confirmDel && (
+        <Modal
+          title="ลบรายงาน"
+          subtitle={confirmDel.code}
+          icon={<Trash2 size={16} />}
+          onClose={() => setConfirmDel(null)}
+          footer={
+            <>
+              <button className="btn" onClick={() => setConfirmDel(null)} disabled={busy}>ยกเลิก</button>
+              <button
+                className="btn"
+                style={{ background: "var(--red)", color: "#fff", border: 0, fontWeight: 600 }}
+                disabled={busy}
+                onClick={() => void remove(confirmDel)}
+              >
+                {busy ? <><Loader2 size={13} className="spin" /> กำลังลบ…</> : <><Trash2 size={13} /> ลบรายงาน</>}
+              </button>
+            </>
+          }
+        >
+          <p style={{ fontSize: 12.5, lineHeight: 1.7 }}>
+            ต้องการลบรายงาน <b>“{confirmDel.title}”</b> ใช่หรือไม่?<br />
+            <span className="tiny muted">การลบไม่สามารถย้อนกลับได้ — ไฟล์ใน Google Drive จะยังอยู่</span>
+          </p>
+        </Modal>
+      )}
 
       {open && (
         <Modal
@@ -332,7 +378,10 @@ export function ReportsView() {
               <select className="select" value={draft.status} onChange={(e) => setDraft({ ...draft, status: e.target.value as ReportStatus })}>
                 <option value="draft">ฉบับร่าง</option>
                 <option value="submitted">ส่งแล้ว (รออนุมัติ)</option>
-                {manager && <option value="approved">อนุมัติแล้ว</option>}
+                {/* รายงานที่อนุมัติแล้วต้องแสดงค่าจริง ไม่ให้เผลอถอยสถานะกลับ */}
+                {(manager || draft.status === "approved") && (
+                  <option value="approved" disabled={!manager}>อนุมัติแล้ว</option>
+                )}
               </select>
             </label>
           </div>
