@@ -14,6 +14,7 @@ export type ModuleKey =
   | "calendar"
   | "tasks"
   | "ai"
+  | "tools"
   | "chat"
   | "reports"
   | "hr"
@@ -68,6 +69,7 @@ export const MODULE_META: Record<ModuleKey, { label: string; group: string; desc
   calendar: { label: "ปฏิทิน", group: "Workspace", desc: "ปฏิทินทีม/แผนก · เดดไลน์งาน" },
   tasks: { label: "งาน & Kanban", group: "Workspace", desc: "งานของแผนก · สถานะ 4 ขั้น" },
   ai: { label: "AI Workforce", group: "Workspace", desc: "เอเจนต์ AI และ run log" },
+  tools: { label: "Plugin Tools", group: "Workspace", desc: "เครื่องมือคู่กับงาน · ล็อกอินเว็บ · ลิ้งสั่งงาน · ตั้งเวลา · แคปหน้าจอ" },
   chat: { label: "แชท & Drive", group: "Workspace", desc: "ห้องแชททีมและไฟล์ Drive" },
   reports: { label: "รายงาน & Drive", group: "Workspace", desc: "รายงาน + ไฟล์แนบ Drive" },
   hr: { label: "HR & ลงเวลา", group: "Workspace", desc: "ลงเวลา · ลา · จองห้อง" },
@@ -79,11 +81,11 @@ export const MODULE_META: Record<ModuleKey, { label: string; group: string; desc
 
 /** โมดูลที่แต่ละบทบาทเข้าถึงได้ */
 const ACCESS: Record<UserRole, ModuleKey[]> = {
-  admin: ["dashboard", "calendar", "tasks", "ai", "chat", "reports", "hr", "staff", "finance", "led", "settings"],
-  support: ["dashboard", "calendar", "tasks", "chat", "reports", "hr", "staff", "led", "settings"],
-  manager: ["dashboard", "calendar", "tasks", "chat", "reports", "hr", "staff", "finance", "led"],
-  ai: ["dashboard", "calendar", "hr", "chat"],
-  member: ["dashboard", "calendar", "tasks", "chat", "reports", "hr"],
+  admin: ["dashboard", "calendar", "tasks", "ai", "tools", "chat", "reports", "hr", "staff", "finance", "led", "settings"],
+  support: ["dashboard", "calendar", "tasks", "tools", "chat", "reports", "hr", "staff", "led", "settings"],
+  manager: ["dashboard", "calendar", "tasks", "tools", "chat", "reports", "hr", "staff", "finance", "led"],
+  ai: ["dashboard", "calendar", "tools", "hr", "chat"],
+  member: ["dashboard", "calendar", "tasks", "tools", "chat", "reports", "hr"],
 };
 
 /** ขอบเขตข้อมูลของแต่ละบทบาท */

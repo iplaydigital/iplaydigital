@@ -4,7 +4,7 @@ import React, { useMemo } from "react";
 import {
   Bell, Bot, CalendarDays, ChevronDown, Columns3, Command, FileBarChart2, KeyRound, LayoutDashboard,
   LogOut, MessageSquare, MonitorPlay, Plus, Search, Settings, ShieldCheck, Sparkles, Users, UserCog, Zap, Cloud,
-  Link2, UserCircle2, FolderKanban, Network,
+  Link2, UserCircle2, FolderKanban, Network, Wrench,
 } from "lucide-react";
 import { useApp, type View } from "./providers";
 import { Dashboard } from "./dashboard";
@@ -20,6 +20,7 @@ import { StaffView } from "./staff-view";
 import { ProfileView } from "./profile-view";
 import { ProjectsView } from "./projects-view";
 import { OrgChartView } from "./org-chart";
+import { PluginToolsView } from "./plugin-tools";
 import { RoleDashboard } from "./role-dashboard";
 import { DbBanner } from "./db-status";
 import { EventModal, GlobalSearch, NewTaskModal, TaskDrawer } from "./task-ui";
@@ -37,6 +38,7 @@ const NAV: { group: string; items: NavItem[] }[] = [
       { key: "calendar", label: "ปฏิทิน", icon: <CalendarDays size={16} />, module: "calendar" },
       { key: "tasks", label: "งาน & Kanban", icon: <Columns3 size={16} />, module: "tasks", meta: "tasks" },
       { key: "ai", label: "AI Workforce", icon: <Bot size={16} />, module: "ai", meta: "ai" },
+      { key: "tools", label: "Plugin Tools", icon: <Wrench size={16} />, module: "tools" },
       { key: "chat", label: "แชท & Drive", icon: <MessageSquare size={16} />, module: "chat", meta: "chat" },
       { key: "reports", label: "รายงาน & Drive", icon: <FileBarChart2 size={16} />, module: "reports" },
       { key: "hr", label: "HR & ลงเวลา", icon: <Users size={16} />, module: "hr" },
@@ -68,6 +70,7 @@ const TITLES: Record<View, { title: string; sub: string }> = {
   calendar: { title: "ปฏิทินทีม", sub: "เดือน / สัปดาห์ / วัน / กำหนดการ · ลากย้ายได้" },
   tasks: { title: "งาน & Kanban", sub: "4 สถานะ · งานย่อย · AI รับงานได้" },
   ai: { title: "AI Workforce", sub: "เอเจนต์ทำงานเหมือนคน พร้อม run log และ token" },
+  tools: { title: "Plugin Tools", sub: "เครื่องมือคู่กับงาน · ล็อกอินเว็บ · ลิ้งสั่งงาน · ตั้งเวลา · แคปหน้าจอเป็นรายงาน" },
   chat: { title: "แชท & Google Drive", sub: "กลุ่ม · ปักหมุด · แชร์เอกสาร · AI ช่วยตอบ" },
   reports: { title: "รายงาน & Google Drive", sub: "สร้าง/แก้ไขรายงาน · แนบไฟล์ Drive · อนุมัติ" },
   hr: { title: "HR & ลงเวลา", sub: "เช็คอินนอกสถานที่ · ลา · จองห้องประชุม" },
@@ -223,6 +226,7 @@ export function Shell() {
               {view === "calendar" && <CalendarView />}
               {view === "tasks" && <TasksView />}
               {view === "ai" && <AiWorkforce />}
+              {view === "tools" && <PluginToolsView />}
               {view === "chat" && <ChatWorkspace />}
               {view === "reports" && <ReportsView />}
               {view === "hr" && <HrView />}
