@@ -9,8 +9,9 @@ import {
   Trash2, TrendingUp, Users, X,
 } from "lucide-react";
 import { useApp } from "./providers";
+import { ScopeBadge } from "./scope-badge";
 import { Avatar, Empty, Modal } from "./ui";
-import { cls, money, thaiDate } from "../lib/utils";
+import { cls, money, thaiDate, todayStr } from "../lib/utils";
 import type { Project } from "../lib/types";
 
 const STATUS: { key: Project["status"]; label: string; color: string; soft: string }[] = [
@@ -44,7 +45,7 @@ interface Draft {
 }
 
 const emptyDraft = (): Draft => {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayStr();
   return {
     code: "", name: "", client: "", status: "planning", progress: 0,
     start: today, due: today, budget: "0", spent: "0", grad: GRADS[0], members: [],
@@ -160,7 +161,7 @@ export function ProjectsView() {
 
       <div className="card">
         <div className="card-head">
-          <div className="card-title"><FolderKanban size={14} /> บริหารจัดการโปรเจกต์</div>
+          <div className="card-title"><FolderKanban size={14} /> บริหารจัดการโปรเจกต์ <ScopeBadge counts={`${shown.length} โปรเจกต์`} /></div>
           <div className="row" style={{ gap: 8 }}>
             <div className="searchbox" style={{ height: 32, width: 220 }}>
               <Search size={13} />

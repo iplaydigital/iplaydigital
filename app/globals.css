@@ -1259,3 +1259,11 @@ button.module-chip:hover { border-color: var(--violet-2); }
   .tool-facts { grid-template-columns: 1fr; }
   .tool-grid { grid-template-columns: 1fr; }
 }
+
+/* ── ป้ายขอบเขตข้อมูลตามบทบาท ─────────────────────────────── */
+.scope-badge {
+  display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 20px;
+  border: 1px solid transparent; font-size: 10px; font-weight: 600; white-space: nowrap;
+  vertical-align: middle;
+}
+.scope-badge b { font-weight: 600; opacity: 0.85; }

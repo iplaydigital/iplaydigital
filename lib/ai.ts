@@ -1,5 +1,6 @@
 import type { Bootstrap, Member } from "./types";
 import { thaiShort, thaiTime, relDay, LEAVE_META } from "./utils";
+import { tzDate } from "./tz";
 
 const who = (b: Bootstrap, id: string) => b.members.find((m) => m.id === id);
 
@@ -87,7 +88,7 @@ export function aiReply(b: Bootstrap, agentId: string, userText: string): { repl
   }
 
   if (/เช็คอิน|check.?in|พิกัด|map|แผนที่/i.test(userText)) {
-    const todayIn = b.checkins.filter((c) => c.at.slice(0, 10) === b.today);
+    const todayIn = b.checkins.filter((c) => tzDate(c.at) === b.today);
     return {
       reply: line(
         `สรุปการเช็คอินวันนี้ครับ — ${todayIn.length} คน\n` +

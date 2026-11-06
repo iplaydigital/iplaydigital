@@ -6,6 +6,7 @@ import type {
   DriveFile, LeaveRequest, Member, Message, Project, Room, Settings, Subtask, Task,
 } from "./types";
 import type { StoreData } from "./store";
+import { tzDate as bkkDate, tzToday as bkkToday } from "./tz";
 import { seedData } from "./seed";
 import { uid, pad, remapColor } from "./utils";
 
@@ -55,7 +56,7 @@ const j = <T,>(v: unknown, fallback: T): T => {
 const iso = (v: string | null | undefined) => (v ? new Date(v.replace(" ", "T")).toISOString() : new Date().toISOString());
 const hm = (v: string | null | undefined) => (v ? v.slice(0, 5) : undefined);
 const dt = () => new Date().toISOString().slice(0, 19).replace("T", " ");
-const todayStr = () => new Date().toISOString().slice(0, 10);
+const todayStr = () => bkkToday();
 
 export async function ensureSchema() {
   const p0 = pool();
@@ -477,7 +478,7 @@ export async function applyMaria(action: Action): Promise<void> {
           for (let i = 0; i < Math.max(1, l.days); i++) {
             const d = new Date(from);
             d.setDate(d.getDate() + i);
-            const ds = d.toISOString().slice(0, 10);
+            const ds = bkkDate(d);
             await p.query("INSERT INTO ws_events (id,title,event_date,category,description,owner_id) VALUES (?,?,?,?,?,?)",
               [uid("e"), `${label}: ${member?.nickname ?? ""}`, ds, "holiday", l.reason, l.user_id]);
           }

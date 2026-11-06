@@ -12,6 +12,7 @@ import { WorkloadBars } from "./charts";
 import { DEPARTMENTS, deptColor, deptName, deptShort, teamName } from "../lib/org";
 import { ROLE_META, canAccess, roleScope } from "../lib/rbac";
 import { STATUS_META, STATUS_ORDER, cls, money, thaiDate, thaiTime } from "../lib/utils";
+import { tzDate } from "../lib/tz";
 import type { Bootstrap, SessionUser } from "../lib/types";
 
 /** แดชบอร์ดที่เปลี่ยนหน้าตาตามสิทธิ์ของบทบาท */
@@ -185,7 +186,7 @@ function AiDashboard({ data, me }: { data: Bootstrap; me: SessionUser }) {
     }).length,
     checkins: data.checkins.filter((c) => {
       const m = data.members.find((x) => x.id === c.userId);
-      return m?.departmentId === d.id && c.at.slice(0, 10) === data.today;
+      return m?.departmentId === d.id && tzDate(c.at) === data.today;
     }).length,
     leaves: data.leaves.filter((l) => {
       const m = data.members.find((x) => x.id === l.userId);
@@ -193,7 +194,7 @@ function AiDashboard({ data, me }: { data: Bootstrap; me: SessionUser }) {
     }).length,
   }));
 
-  const todayCheckins = data.checkins.filter((c) => c.at.slice(0, 10) === data.today);
+  const todayCheckins = data.checkins.filter((c) => tzDate(c.at) === data.today);
   const todayEvents = data.events.filter((e) => e.date === data.today).sort((a, b) => (a.time || "99").localeCompare(b.time || "99"));
   const pendingLeaves = data.leaves.filter((l) => l.status === "pending");
   const recentMessages = [...data.messages].sort((a, b) => b.at.localeCompare(a.at)).slice(0, 5);
@@ -296,7 +297,7 @@ function AiDashboard({ data, me }: { data: Bootstrap; me: SessionUser }) {
 function OpsDashboard({ data, me }: { data: Bootstrap; me: SessionUser }) {
   const { go } = useApp();
   const humans = data.members.filter((m) => m.kind === "human");
-  const todayCheckins = data.checkins.filter((c) => c.at.slice(0, 10) === data.today);
+  const todayCheckins = data.checkins.filter((c) => tzDate(c.at) === data.today);
   const pendingLeaves = data.leaves.filter((l) => l.status === "pending");
   return (
     <div className="page">
@@ -356,7 +357,7 @@ function MemberDashboard({ data, me, scope }: { data: Bootstrap; me: SessionUser
   const openTasks = myTasks.filter((t) => t.status !== "done");
   const overdue = openTasks.filter((t) => new Date(t.due + "T23:59:59") < now);
   const myEvents = data.events.filter((e) => e.date === data.today && (!e.ownerId || e.ownerId === myId));
-  const myCheckin = data.checkins.find((c) => c.userId === myId && c.at.slice(0, 10) === data.today);
+  const myCheckin = data.checkins.find((c) => c.userId === myId && tzDate(c.at) === data.today);
   const myLeaves = data.leaves.filter((l) => l.userId === myId);
   const teammates = data.members.filter((m) => m.departmentId === me.departmentId && m.kind === "human");
   const dept = DEPARTMENTS.find((d) => d.id === me.departmentId);

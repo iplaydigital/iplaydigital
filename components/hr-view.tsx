@@ -9,7 +9,8 @@ import { useApp } from "./providers";
 import { Avatar, Empty, Modal } from "./ui";
 import { textOn } from "../lib/utils";
 import type { LeaveType } from "../lib/types";
-import { LEAVE_META, addDays, cls, d2s, pad, thaiDate, thaiShort, thaiTime, relTime } from "../lib/utils";
+import { LEAVE_META, addDays, cls, d2s, pad, thaiDate, thaiShort, thaiTime, relTime, todayStr } from "../lib/utils";
+import { hhmmToMinutes, tzDate, tzMinutes } from "../lib/tz";
 
 type Tab = "checkin" | "leave" | "rooms" | "team";
 
@@ -19,7 +20,8 @@ export function HrView() {
   if (!data) return null;
 
   const today = data.today;
-  const todayCheckins = data.checkins.filter((c) => c.at.slice(0, 10) === today);
+  // เทียบ “วันนี้” ด้วยเวลาไทยเสมอ (เดิมใช้ slice ISO = UTC ทำให้ช่วงเที่ยงคืน–07:00 น. ของไทยขึ้นเป็นเมื่อวาน)
+  const todayCheckins = data.checkins.filter((c) => tzDate(c.at) === today);
   const pending = data.leaves.filter((l) => l.status === "pending");
 
   return (
@@ -32,7 +34,7 @@ export function HrView() {
           <button className={tab === "team" ? "on" : ""} onClick={() => setTab("team")}><Users size={13} /> ทีม & เวลาทำงาน</button>
         </div>
         <div className="row tiny muted">
-          <Clock size={11} /> เวลาทำงาน {data.settings.workStart}–{data.settings.workEnd} · รัศมีเช็คอินออฟฟิศ {data.settings.office.radius} ม.
+          <Clock size={11} /> เวลาทำงาน {data.settings.workStart}–{data.settings.workEnd} น. (เวลาไทย GMT+7) · รัศมีเช็คอินออฟฟิศ {data.settings.office.radius} ม.
         </div>
       </div>
 
@@ -47,6 +49,22 @@ export function HrView() {
         <SumCard icon={<Plane size={14} />} label="ใบลารออนุมัติ" value={`${pending.length} ใบ`} />
       </div>
     </div>
+  );
+}
+
+/** ป้ายบอกว่าเข้างานตรงเวลาหรือสาย (เทียบกับเวลาเข้างานใน timezone ไทย) */
+function LateBadge({ iso, workStart }: { iso: string; workStart: string }) {
+  const late = tzMinutes(iso) > hhmmToMinutes(workStart);
+  return (
+    <span
+      className="mode-badge"
+      style={{
+        background: late ? "rgba(255,92,122,.14)" : "rgba(34,199,147,.14)",
+        color: late ? "var(--red)" : "var(--mint)",
+      }}
+    >
+      {late ? `สาย ${tzMinutes(iso) - hhmmToMinutes(workStart)} นาที` : "ตรงเวลา"}
+    </span>
   );
 }
 
@@ -117,7 +135,8 @@ function CheckinTab() {
     setBusy(false);
   };
 
-  const today = data.checkins.filter((c) => c.at.slice(0, 10) === data.today);
+  const today = data.checkins.filter((c) => tzDate(c.at) === data.today);
+  const startMin = hhmmToMinutes(data.settings.workStart);
 
   return (
     <div className="grid-2" style={{ gridTemplateColumns: "1fr 1.25fr" }}>
@@ -176,8 +195,11 @@ function CheckinTab() {
                     <span className="mode-badge" style={{ background: c.mode === "office" ? "rgba(34,199,147,.16)" : c.mode === "remote" ? "rgba(59,167,255,.16)" : "rgba(255,176,32,.16)", color: c.mode === "office" ? "var(--mint)" : c.mode === "remote" ? "var(--cyan)" : "var(--amber)" }}>
                       {c.mode === "office" ? "ออฟฟิศ" : c.mode === "remote" ? "WFH" : "นอกสถานที่"}
                     </span>
+                    <LateBadge iso={c.at} workStart={data.settings.workStart} />
                   </div>
-                  <small className="tiny muted">{thaiTime(c.at)} · {c.place}{c.distance ? ` · ${c.distance.toLocaleString()} ม.` : ""}</small>
+                  <small className="tiny muted">
+                    เข้างาน {thaiTime(c.at)} น. · {c.place}{c.distance ? ` · ${c.distance.toLocaleString()} ม.` : ""}
+                  </small>
                   {c.note && <div className="tiny" style={{ color: "var(--text-2)" }}>{c.note}</div>}
                 </div>
                 <a className="btn btn-sm" href={c.mapUrl} target="_blank" rel="noreferrer"><MapPin size={11} /> แผนที่</a>
@@ -194,7 +216,7 @@ function CheckinTab() {
 /* ── leave ────────────────────────────────────────────────── */
 function LeaveTab() {
   const { data, act, toast } = useApp();
-  const [form, setForm] = useState({ type: "annual" as LeaveType, from: d2s(new Date()), to: d2s(new Date()), reason: "" });
+  const [form, setForm] = useState({ type: "annual" as LeaveType, from: todayStr(), to: todayStr(), reason: "" });
   const [open, setOpen] = useState(false);
   if (!data) return null;
 
@@ -334,7 +356,7 @@ const HOURS = Array.from({ length: 13 }, (_, i) => 8 + i);
 function RoomsTab() {
   const { data, act, toast } = useApp();
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ roomId: data?.rooms[0]?.id ?? "", title: "", date: data?.today ?? d2s(new Date()), start: "14:00", end: "15:00", attendees: 4 });
+  const [form, setForm] = useState({ roomId: data?.rooms[0]?.id ?? "", title: "", date: data?.today ?? todayStr(), start: "14:00", end: "15:00", attendees: 4 });
   if (!data) return null;
 
   const toMin = (t: string) => Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5));
@@ -473,7 +495,8 @@ function TeamTab() {
   const { data } = useApp();
   if (!data) return null;
   const humans = data.members.filter((m) => m.kind === "human");
-  const today = data.checkins.filter((c) => c.at.slice(0, 10) === data.today);
+  const today = data.checkins.filter((c) => tzDate(c.at) === data.today);
+  const startMin = hhmmToMinutes(data.settings.workStart);
   return (
     <div className="grid-2">
       <div className="card">
@@ -489,7 +512,7 @@ function TeamTab() {
                   <div className="spread">
                     <b style={{ fontSize: 12 }}>{m.name}</b>
                     <span className="tiny" style={{ color: ci ? (ci.mode === "office" ? "var(--mint)" : "var(--cyan)") : "var(--muted)" }}>
-                      {ci ? `${ci.mode === "office" ? "เข้างาน" : ci.mode === "remote" ? "WFH" : "นอกสถานที่"} ${thaiTime(ci.at)}` : "ยังไม่เช็คอิน"}
+                      {ci ? `${ci.mode === "office" ? "เข้างาน" : ci.mode === "remote" ? "WFH" : "นอกสถานที่"} ${thaiTime(ci.at)}${tzMinutes(ci.at) > hhmmToMinutes(data.settings.workStart) ? " · สาย" : ""}` : "ยังไม่เช็คอิน"}
                     </span>
                   </div>
                   <div className="meter" style={{ marginTop: 4 }}>
@@ -508,7 +531,7 @@ function TeamTab() {
           <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 6 }}>
             {Array.from({ length: 7 }, (_, i) => {
               const d = d2s(addDays(new Date(), i - 3));
-              const count = data.checkins.filter((c) => c.at.slice(0, 10) === d && c.mode === "office").length;
+              const count = data.checkins.filter((c) => tzDate(c.at) === d && c.mode === "office").length;
               return (
                 <div key={d} style={{ textAlign: "center", background: "var(--tint-1)", borderRadius: 9, padding: "8px 4px" }}>
                   <div className="tiny muted">{thaiShort(d)}</div>

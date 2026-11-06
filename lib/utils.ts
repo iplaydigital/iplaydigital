@@ -1,4 +1,5 @@
 import type { EventCat, Priority, TaskStatus } from "./types";
+import { tzDate, tzTime, tzTimeSec, tzToday } from "./tz";
 
 export const pad = (n: number) => String(n).padStart(2, "0");
 export const uid = (prefix = "id") =>
@@ -28,7 +29,7 @@ export const startOfWeek = (d: Date) => {
 };
 export const daysBetween = (a: string, b: string) =>
   Math.round((s2d(b).getTime() - s2d(a).getTime()) / 86400000);
-export const daysLeft = (due: string) => daysBetween(d2s(new Date()), due);
+export const daysLeft = (due: string) => daysBetween(tzToday(), due);
 export const sameDay = (a: string, b: string) => a === b;
 export const clamp = (n: number, min: number, max: number) => Math.min(max, Math.max(min, n));
 
@@ -58,10 +59,18 @@ export function thaiFull(input: string | Date) {
   const d = typeof input === "string" ? s2d(input) : input;
   return `${TH_DOW_FULL[d.getDay()]} ${d.getDate()} ${TH_MONTHS[d.getMonth()]} ${BE(d.getFullYear())}`;
 }
+/** เวลาตามเวลาไทยเสมอ (ไม่ขึ้นกับ timezone ของเครื่องผู้ใช้) */
 export function thaiTime(iso: string) {
-  const d = new Date(iso);
-  return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  return tzTime(iso);
 }
+/** เวลาพร้อมวินาทีตามเวลาไทย */
+export function thaiTimeSec(iso: string) {
+  return tzTimeSec(iso);
+}
+/** วันที่ของวันนี้ตามเวลาไทย (YYYY-MM-DD) */
+export const todayStr = () => tzToday();
+/** วันที่ตามเวลาไทยของ timestamp ใด ๆ */
+export const bkkDate = (iso: string | number | Date) => tzDate(iso);
 export function relDay(date: string) {
   const n = daysLeft(date);
   if (n === 0) return "วันนี้";
@@ -147,6 +156,13 @@ export const textOn = (hex: string) => {
   return lum > 0.66 ? "#23264D" : "#ffffff";
 };
 export const cls = (...a: (string | false | null | undefined)[]) => a.filter(Boolean).join(" ");
+
+/** รายงานที่ระบบสร้างอัตโนมัติ (Plugin Tools / AI / ดึงข้อมูลจาก Google Drive) */
+export function isAutoReport(report: { authorId?: string | null; authorName?: string | null }) {
+  const author = String(report.authorId ?? "");
+  const name = String(report.authorName ?? "");
+  return author.startsWith("ai_") || /plugin tool|อัตโนมัติ|automatic/i.test(name);
+}
 
 export const isDriveUrl = (u: string) => /drive\.google\.com|docs\.google\.com/.test(u);
 export const driveKind = (u: string): "doc" | "sheet" | "slide" | "pdf" | "image" | "folder" | "other" => {
