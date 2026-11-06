@@ -6,6 +6,8 @@ import {
   MapPin, Maximize2, Minimize2, Plus, Rows3, Sparkles, Users, X,
 } from "lucide-react";
 import { useApp } from "./providers";
+import { ScopeBadge } from "./scope-badge";
+import { tzMinutes, tzToday } from "../lib/tz";
 import type { CalendarEvent, EventCat } from "../lib/types";
 import {
   CAT_META, CAT_ORDER, addDays, addMonths, cls, d2s, pad, relDay, s2d,
@@ -98,7 +100,9 @@ export function CalendarView() {
   const monthStart = new Date(cursor.getFullYear(), cursor.getMonth(), 1);
   const gridStart = startOfWeek(monthStart);
   const cells = Array.from({ length: 42 }, (_, i) => addDays(gridStart, i));
-  const todayStr = d2s(now);
+  // "วันนี้" และเส้นเวลาปัจจุบัน ยึดเวลาไทยเสมอ
+  const todayStr = tzToday();
+  const nowMin = tzMinutes(now);
 
   const weekStart = startOfWeek(cursor);
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
@@ -268,8 +272,8 @@ export function CalendarView() {
                           </DropCell>
                         );
                       })}
-                      {ds === todayStr && now.getHours() >= START_H && now.getHours() < END_H && (
-                        <div className="now-line" style={{ top: ((now.getHours() * 60 + now.getMinutes() - START_H * 60) / 60) * ROW_H }} />
+                      {ds === todayStr && nowMin >= START_H * 60 && nowMin < END_H * 60 && (
+                        <div className="now-line" style={{ top: ((nowMin - START_H * 60) / 60) * ROW_H }} />
                       )}
                     </div>
                   );
@@ -326,8 +330,8 @@ export function CalendarView() {
                       </DropCell>
                     );
                   })}
-                  {d2s(cursor) === todayStr && now.getHours() >= START_H && now.getHours() < END_H && (
-                    <div className="now-line" style={{ top: ((now.getHours() * 60 + now.getMinutes() - START_H * 60) / 60) * ROW_H }} />
+                  {d2s(cursor) === todayStr && nowMin >= START_H * 60 && nowMin < END_H * 60 && (
+                    <div className="now-line" style={{ top: ((nowMin - START_H * 60) / 60) * ROW_H }} />
                   )}
                 </div>
               </div>
@@ -370,6 +374,8 @@ export function CalendarView() {
         </div>
 
         <div>
+          <div className="side-h"><Layers size={11} /> ขอบเขตที่เห็น</div>
+          <div style={{ marginBottom: 10 }}><ScopeBadge counts={`${evs.length} รายการ`} /></div>
           <div className="side-h"><Layers size={11} /> หมวดอีเวนต์</div>
           <div className="cat-filter">
             {CAT_ORDER.map((c) => (

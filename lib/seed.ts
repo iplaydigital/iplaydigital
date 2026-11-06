@@ -1,7 +1,8 @@
 import type { Bootstrap, Member, Task, CalendarEvent, Message, Project, AiRun, ActivityItem, Booking, LeaveRequest, CheckIn, Room, Channel, DriveFile } from "./types";
 import { addDays, d2s, pad, uid } from "./utils";
+import { tzToday as bkkToday } from "./tz";
 
-const TODAY = d2s(new Date());
+const TODAY = bkkToday();
 const D = (n: number) => d2s(addDays(TODAY, n));
 const iso = (minsAgo: number) => new Date(Date.now() - minsAgo * 60000).toISOString();
 const at = (day: string, hh: number, mm = 0) => {

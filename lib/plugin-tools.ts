@@ -11,6 +11,7 @@ import path from "path";
 import crypto from "crypto";
 import { applyAction } from "./store";
 import { createReport } from "./reports";
+import { tzDate as bkkDate, tzToday as bkkToday } from "./tz";
 
 // ── ชนิดข้อมูล ───────────────────────────────────────────────
 export type ToolKind = "web-publish" | "python" | "ai" | "http" | "custom";
@@ -981,8 +982,8 @@ export async function processDueTools(limit = 3): Promise<{ ran: RunOutcome[]; d
 /** สรุปภาพรวมสำหรับ KPI */
 export function toolSummary(tools: PluginTool[]) {
   const runs = tools.flatMap((t) => t.runs);
-  const today = new Date().toISOString().slice(0, 10);
-  const runsToday = runs.filter((r) => r.at.slice(0, 10) === today);
+  const today = bkkDate(new Date());
+  const runsToday = runs.filter((r) => bkkDate(r.at) === today);
   const okRuns = runs.filter((r) => r.ok).length;
   const scheduled = tools.filter((t) => t.enabled && t.nextRunAt).length;
   const upcoming = tools

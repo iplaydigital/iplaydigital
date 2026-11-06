@@ -8,6 +8,7 @@ import {
 import { useApp } from "./providers";
 import { Modal } from "./ui";
 import { cls, thaiDate, thaiTime, textOn } from "../lib/utils";
+import { tzDate } from "../lib/tz";
 import { MODULE_META, ROLE_META, canAccess, visibleModules, type ModuleKey } from "../lib/rbac";
 import type { AuditEntry, Department, LoginLog, SessionUser, Team, UserRole } from "../lib/types";
 
@@ -451,7 +452,7 @@ function StaffDrawer({
                     <div className="tl-body">
                       <div className="tl-top">
                         <b>{auditActionLabel(a.action)}{a.field ? ` · ${a.field}` : ""}</b>
-                        <span className="tiny muted">{thaiDate(a.at.slice(0, 10), { short: true })} {thaiTime(a.at)}</span>
+                        <span className="tiny muted">{thaiDate(tzDate(a.at), { short: true })} {thaiTime(a.at)}</span>
                       </div>
                       {(a.from || a.to) && (
                         <div className="tiny">
@@ -478,7 +479,7 @@ function StaffDrawer({
                 <tbody>
                   {logins.map((l) => (
                     <tr key={l.id}>
-                      <td className="tiny">{thaiDate(l.at.slice(0, 10), { short: true })} {thaiTime(l.at)}</td>
+                      <td className="tiny">{thaiDate(tzDate(l.at), { short: true })} {thaiTime(l.at)}</td>
                       <td className="tiny">{l.provider === "password" ? "อีเมล" : l.provider === "google" ? "Google" : l.provider === "line" ? "LINE" : "Session"}</td>
                       <td className="tiny">
                         <span className="pill" style={{ background: l.ok ? "rgba(34,199,147,.14)" : "var(--red-soft)", color: l.ok ? "#149C74" : "#C9304F" }}>

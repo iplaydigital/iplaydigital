@@ -7,7 +7,7 @@ import {
 } from "lucide-react";
 import { useApp } from "./providers";
 import { Modal } from "./ui";
-import { cls, thaiDate } from "../lib/utils";
+import { cls, isAutoReport, thaiDate } from "../lib/utils";
 import type { Report, ReportStatus } from "../lib/types";
 
 const STATUS_META: Record<ReportStatus, { label: string; color: string; soft: string }> = {
@@ -65,7 +65,8 @@ export function ReportsView() {
     if (!author && r.authorName && r.authorName === me.name) return true;
     return false;
   };
-  const canEditOf = (r: Report) => manager || mineOf(r);
+  // รายงานที่ระบบสร้างอัตโนมัติ (Plugin Tools / Drive) แก้ไข–ลบได้ทุกคนที่เข้าถึงโมดูลรายงาน
+  const canEditOf = (r: Report) => manager || mineOf(r) || isAutoReport(r);
 
   const load = React.useCallback(async () => {
     setLoading(true);
@@ -268,6 +269,11 @@ export function ReportsView() {
                   <div className="rp-top">
                     <span className="code-chip">{r.code}</span>
                     <span className="pill" style={{ background: meta.soft, color: meta.color }}>{meta.label}</span>
+                    {isAutoReport(r) && (
+                      <span className="pill" style={{ background: "rgba(47,123,240,.12)", color: "#2F7BF0" }} title="สร้างโดยระบบอัตโนมัติ (Plugin Tools / Google Drive) — แก้ไขหรือลบได้">
+                        อัตโนมัติ · Drive
+                      </span>
+                    )}
                     {project && <span className="chip">{project.code} · {project.name}</span>}
                     <span className="tiny muted" style={{ marginLeft: "auto" }}>อัปเดต {thaiDate(r.updatedAt.slice(0, 10), { short: true })}</span>
                   </div>

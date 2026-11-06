@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { applyAction, getBootstrap } from "@/lib/store";
 import { requireUser } from "@/lib/auth";
 import { roleScope } from "@/lib/rbac";
+import { filterBootstrapFor, viewerOf } from "@/lib/visibility";
 import type { Action } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -30,7 +31,7 @@ export async function POST(req: Request) {
       if (action.type === "hr.booking") action.booking = { ...action.booking, ownerId: user.memberId };
     }
     await applyAction(action);
-    const data = await getBootstrap();
+    const data = filterBootstrapFor(await getBootstrap(), viewerOf(user));
     return NextResponse.json(data, { headers: { "Cache-Control": "no-store" } });
   } catch (err) {
     const dbError = (err as { dbError?: unknown }).dbError ?? null;

@@ -1,14 +1,17 @@
 import { NextResponse } from "next/server";
 import { getBootstrap } from "@/lib/store";
 import { requireUser } from "@/lib/auth";
+import { filterBootstrapFor, viewerOf } from "@/lib/visibility";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const { error } = await requireUser();
+  const { user, error } = await requireUser();
   if (error) return error;
   try {
-    const data = await getBootstrap();
+    const full = await getBootstrap();
+    // เห็นเฉพาะงาน/โปรเจกต์/ปฏิทินที่เกี่ยวข้องกับบทบาทของผู้ใช้คนนี้
+    const data = filterBootstrapFor(full, viewerOf(user));
     return NextResponse.json(data, {
       headers: { "Cache-Control": "no-store" },
     });

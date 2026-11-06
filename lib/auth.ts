@@ -8,6 +8,7 @@ import type { SessionUser, UserRole } from "./types";
 import { getUserById, toClient, type User } from "./users";
 import { canAccess, roleScope, type ModuleKey } from "./rbac";
 import { isSuperAdmin } from "./oauth-config";
+import { isAutoReport } from "./utils";
 
 export const COOKIE = "ipw_session";
 const MAX_AGE = 60 * 60 * 24 * 7; // 7 วัน
@@ -96,12 +97,15 @@ export function ownsReport(
   return false;
 }
 
-/** แก้ไข/ลบรายงานได้ = เจ้าของ หรือ Admin / Support / Manager */
+/**
+ * แก้ไข/ลบรายงานได้ = เจ้าของ หรือ Admin / Support / Manager
+ * หรือ “รายงานที่ระบบสร้างอัตโนมัติ” (Plugin Tools ดึงจากเว็บ/Google Drive) ซึ่งไม่มีเจ้าของเป็นคน
+ */
 export function canEditReport(
   user: SessionUser | null | undefined,
   report: { authorId?: string | null; authorName?: string | null },
 ): boolean {
-  return ownsReport(user, report) || canManageReports(user);
+  return ownsReport(user, report) || canManageReports(user) || isAutoReport(report);
 }
 
 /** หัวหน้า/ผู้บริหารที่อนุมัติได้ */

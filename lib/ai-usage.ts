@@ -6,6 +6,7 @@ import fs from "fs";
 import path from "path";
 import crypto from "crypto";
 import type { AiProvider } from "./ai-agents";
+import { tzDate as bkkDate, tzToday as bkkToday } from "./tz";
 
 export interface UsageEntry {
   id: string;
@@ -212,7 +213,7 @@ export async function usageStats(days = 30): Promise<UsageStats> {
 
   const dailyMap = new Map<string, { tokens: number; cost: number; calls: number }>();
   for (let i = days - 1; i >= 0; i--) {
-    const d = new Date(Date.now() - i * 86400_000).toISOString().slice(0, 10);
+    const d = bkkDate(Date.now() - i * 86400_000);
     dailyMap.set(d, { tokens: 0, cost: 0, calls: 0 });
   }
   for (const e of all) {

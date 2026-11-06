@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getBootstrap } from "../../../lib/store";
+import { tzToday as bkkToday } from "../../../lib/tz";
 
 export const dynamic = "force-dynamic";
 
@@ -9,7 +10,7 @@ export const dynamic = "force-dynamic";
  */
 export async function GET() {
   const data = await getBootstrap();
-  const today = new Date().toISOString().slice(0, 10);
+  const today = bkkToday();
   const now = new Date();
   return NextResponse.json({
     screen: "iPlay Digital · Park Silom LED",

@@ -8,6 +8,7 @@ import {
 import { useApp } from "./providers";
 import { Avatar, Empty, Meter, PriorityPill, StatusPill } from "./ui";
 import { NewTaskModal } from "./task-ui";
+import { ScopeBadge } from "./scope-badge";
 import type { Priority, TaskStatus } from "../lib/types";
 import { PRIORITY_META, STATUS_META, STATUS_ORDER, cls, relDay, thaiShort } from "../lib/utils";
 
@@ -75,6 +76,7 @@ export function TasksView() {
       </div>
 
       <div className="row" style={{ gap: 14, flexWrap: "wrap", fontSize: 11, color: "var(--muted)" }}>
+        <ScopeBadge counts={`${tasks.length} งาน`} />
         <span><Layers size={11} /> {tasks.length} งานตามตัวกรอง</span>
         <span><AlarmClock size={11} /> เลยกำหนด {tasks.filter((t) => t.status !== "done" && new Date(t.due + "T23:59:59") < new Date()).length}</span>
         <span><Bot size={11} /> AI ดูแล {tasks.filter((t) => t.assigneeId.startsWith("ai_")).length}</span>

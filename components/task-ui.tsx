@@ -8,7 +8,8 @@ import {
 import { useApp } from "./providers";
 import { Avatar, Meter, Modal, PriorityPill, StatusPill } from "./ui";
 import type { EventCat, Priority, TaskStatus } from "../lib/types";
-import { CAT_META, CAT_ORDER, PRIORITY_META, STATUS_META, STATUS_ORDER, cls, relDay, thaiDate, thaiTime, uid } from "../lib/utils";
+import { CAT_META, CAT_ORDER, PRIORITY_META, STATUS_META, STATUS_ORDER, cls, relDay, thaiDate, thaiTime, todayStr, uid } from "../lib/utils";
+import { tzDate } from "../lib/tz";
 
 export function TaskDrawer() {
   const { data, taskId, closeTask, act, toast, openEvent } = useApp();
@@ -276,7 +277,7 @@ export function NewTaskModal({ onClose, defaultStatus = "todo" }: { onClose: () 
   const { data, act, toast } = useApp();
   const [form, setForm] = useState({
     title: "", projectId: data?.projects[0]?.id ?? "", assigneeId: data?.meId ?? "",
-    priority: "med" as Priority, status: defaultStatus, due: new Date(Date.now() + 3 * 86400000).toISOString().slice(0, 10),
+    priority: "med" as Priority, status: defaultStatus, due: tzDate(Date.now() + 3 * 86400000),
     estimate: 4, tags: "", desc: "",
   });
   const [aiDraft, setAiDraft] = useState(false);
@@ -393,7 +394,7 @@ export function EventModal() {
   const editing = eventForm.event && eventForm.event.id;
   const [form, setForm] = useState({
     title: eventForm.event?.title ?? "",
-    date: eventForm.event?.date ?? eventForm.date ?? new Date().toISOString().slice(0, 10),
+    date: eventForm.event?.date ?? eventForm.date ?? todayStr(),
     time: eventForm.event?.time ?? eventForm.time ?? "",
     endTime: eventForm.event?.endTime ?? "",
     cat: (eventForm.event?.cat ?? "work") as EventCat,

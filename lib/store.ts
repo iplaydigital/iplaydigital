@@ -5,6 +5,7 @@ import { seedData, trendData } from "./seed";
 import { uid, STATUS_ORDER, CAT_META, pad, remapColor } from "./utils";
 import { describeDbError } from "./db-diag";
 import { DEPARTMENTS, TEAMS } from "./org";
+import { tzToday as bkkToday } from "./tz";
 
 export type StoreData = Omit<Bootstrap, "trend" | "storage" | "today" | "reports" | "departments" | "teams">;
 
@@ -14,7 +15,7 @@ const g = globalThis as unknown as {
   __dbErr?: import("./db-diag").DbErrorInfo | null;
 };
 
-const todayISO = () => new Date().toISOString().slice(0, 10);
+const todayISO = () => bkkToday();
 
 export function getDbError() {
   return g.__dbErr ?? null;
@@ -122,7 +123,7 @@ export function applyDemoAction(action: Action): StoreData {
         assigneeId: draft.assigneeId || me,
         status: draft.status || "todo",
         priority: draft.priority || "med",
-        due: draft.due || new Date().toISOString().slice(0, 10),
+        due: draft.due || bkkToday(),
         estimate: draft.estimate ?? 4,
         spent: 0, progress: 0,
         tags: draft.tags || [],
@@ -184,7 +185,7 @@ export function applyDemoAction(action: Action): StoreData {
       const draft = action.event;
       const ev: CalendarEvent = {
         id: uid("e"), title: draft.title || "อีเวนต์ใหม่",
-        date: draft.date || new Date().toISOString().slice(0, 10),
+        date: draft.date || bkkToday(),
         cat: draft.cat || "work", time: draft.time, endTime: draft.endTime,
         desc: draft.desc, projectId: draft.projectId, location: draft.location,
         ownerId: draft.ownerId || me, important: draft.important,
@@ -291,8 +292,8 @@ export function applyDemoAction(action: Action): StoreData {
       const l = action.leave;
       data.leaves.unshift({
         id: uid("l"), userId: l.userId, type: l.type || "annual",
-        from: l.from || new Date().toISOString().slice(0, 10),
-        to: l.to || l.from || new Date().toISOString().slice(0, 10),
+        from: l.from || bkkToday(),
+        to: l.to || l.from || bkkToday(),
         days: l.days || 1, reason: l.reason || "", status: "pending", createdAt: now,
       });
       log(data, l.userId, "ยื่นใบลาใหม่", "hr");
@@ -306,7 +307,7 @@ export function applyDemoAction(action: Action): StoreData {
         log(data, action.approverId, `${action.status === "approved" ? "อนุมัติ" : "ปฏิเสธ"}ใบลาของทีม`, "hr");
         if (action.status === "approved") {
           const member = data.members.find((m) => m.id === l.userId);
-          const start = new Date().toISOString().slice(0, 10);
+          const start = bkkToday();
           const from = l.from > start ? l.from : start;
           for (let i = 0; i < Math.max(1, l.days); i++) {
             const day = new Date(from + "T12:00:00");
@@ -330,7 +331,7 @@ export function applyDemoAction(action: Action): StoreData {
       const id = uid("b");
       data.bookings.push({
         id, roomId: b.roomId, title: b.title || "จองห้องประชุม",
-        date: b.date || new Date().toISOString().slice(0, 10),
+        date: b.date || bkkToday(),
         start: b.start || "10:00", end: b.end || "11:00",
         ownerId: b.ownerId, attendees: b.attendees || 1, status: "confirmed",
       });
@@ -338,7 +339,7 @@ export function applyDemoAction(action: Action): StoreData {
       log(data, b.ownerId, `จอง ${room?.name || "ห้องประชุม"} ${b.start}-${b.end}`, "hr");
       data.events.push({
         id: uid("e"), title: `${b.title || "ประชุม"} (${room?.name || "ห้องประชุม"})`,
-        date: b.date || new Date().toISOString().slice(0, 10),
+        date: b.date || bkkToday(),
         time: b.start, endTime: b.end, cat: "meeting", location: room?.name,
         ownerId: b.ownerId, desc: `จองโดย ${owner}`,
       });
