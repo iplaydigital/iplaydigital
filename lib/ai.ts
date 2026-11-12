@@ -1,12 +1,12 @@
 import type { Bootstrap, Member } from "./types";
 import { thaiShort, thaiTime, relDay, LEAVE_META } from "./utils";
-import { tzDate } from "./tz";
+import { tzDate, tzMinutes } from "./tz";
 
 const who = (b: Bootstrap, id: string) => b.members.find((m) => m.id === id);
 
 const roomFreeNow = (b: Bootstrap) => {
   const today = b.today;
-  const nowMin = new Date().getHours() * 60 + new Date().getMinutes();
+  const nowMin = tzMinutes(new Date()); // เวลาไทย
   const toMin = (t: string) => Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5));
   return b.rooms.filter((r) => {
     const busy = b.bookings.filter((x) => x.roomId === r.id && x.date === today);
