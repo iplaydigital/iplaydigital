@@ -362,6 +362,7 @@ iplaydigital/
 ├── scripts/db-init.ts          # npm run db:init
 ├── scripts/db-seed.ts          # npm run db:seed
 ├── scripts/db-doctor.ts        # npm run db:doctor (ตรวจ env → TCP → login → schema)
+├── scripts/db-time.ts          # npm run db:time (ตรวจ/ซ่อมเวลาที่เก็บใน DB ไม่ตรง Bangkok)
 ├── docker-compose.yml          # MariaDB 11 + utf8mb4
 └── .env.example
 ```
@@ -450,12 +451,28 @@ npm run super:setup -- --force # ตั้งรหัสผ่านใหม�
 ```bash
 npm run db:doctor            # ตรวจการเชื่อมต่อทีละขั้น (ภาษาไทย)
 npm run db:migrate           # สร้าง/อัปเกรดตาราง ws_* ทั้งหมด
+npm run db:time              # ตรวจว่าเวลาที่เก็บใน DB ตรงกับเวลาไทย (อ่านอย่างเดียว)
 ```
 ตารางที่ระบบใช้: `ws_members`, `ws_projects`, `ws_tasks`, `ws_task_subtasks`, `ws_task_comments`,
 `ws_events`, `ws_channels`, `ws_messages`, `ws_files`, `ws_rooms`, `ws_bookings`, `ws_leaves`,
 `ws_checkins`, `ws_ai_runs`, `ws_activity`, `ws_settings`, **`ws_users`**, **`ws_reports`**,
 **`ws_departments`**, **`ws_teams`**, **`ws_audit_logs`**, **`ws_login_logs`**
 > คอลัมน์ใหม่จะถูกเพิ่มอัตโนมัติเมื่อเริ่มระบบ (`ALTER TABLE ... ADD COLUMN` แบบข้ามหากมีอยู่แล้ว)
+
+### 🕒 เวลา (สำคัญ: ลงเวลา/เข้างาน)
+- **ข้อตกลงกลาง: เก็บเป็น UTC เสมอ แล้วแสดงผลเป็นเวลาไทย (Asia/Bangkok)** — ตัวช่วยทั้งหมดอยู่ใน `lib/tz.ts`
+  - เขียนลง DB: `sqlUtc()` → `"YYYY-MM-DD HH:mm:ss"` (UTC)
+  - อ่านจาก DB: `sqlToIso()` → ISO ที่ลงท้ายด้วย `Z` (ไม่ตีความตาม timezone ของเซิร์ฟเวอร์อีก)
+  - แสดงผล: `tzTime()` / `tzDate()` / `tzDateTimeText()` / `thaiTime()` ของ UI
+- ทุก connection ถูกตั้ง `SET time_zone = '+00:00'` เพื่อให้ `CURRENT_TIMESTAMP` / `NOW()` เป็น UTC ด้วย
+- **ตรวจสอบบนเซิร์ฟเวอร์จริง**: เปิด `GET /api/health/time` หรือเมนู `ตั้งค่า → ฐานข้อมูล` (แสดง “เวลาระบบ (ไทย)”)
+  - `roundTrip.matches = true` → เขียน/อ่าน/แสดงผลตรงกัน
+  - `database.latestCheckinLooksStoredAsBangkok = true` → มีข้อมูลเก่าที่บันทึกเป็นเวลาไทย ต้องซ่อมครั้งเดียว
+- ซ่อมข้อมูลเก่า (ต้องระบุตารางเสมอ กันการเลื่อนซ้ำ)
+  ```bash
+  npm run db:time                                        # ดูว่าตารางไหนน่าสงสัย
+  npm run db:time -- --shift-hours=-7 --table=ws_checkins --apply
+  ```
 
 ### ความปลอดภัย
 - รหัสผ่านเก็บเป็น **scrypt hash** (`scrypt$salt$hash`) ไม่เก็บ plain text

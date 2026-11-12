@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { APP_TZ, tzDateTimeText, tzTimeSec } from "@/lib/tz";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +19,9 @@ export async function GET() {
       note: "ยังไม่ได้ตั้งค่า DB_HOST — ใช้ demo store (.data/store.json)",
       db: { configured: false, ok: false, error: null },
       time: new Date().toISOString(),
+      timeBangkok: tzDateTimeText(new Date(), { seconds: true }),
+      timeZone: APP_TZ,
+      serverTimeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       latencyMs: Date.now() - started,
     });
   }
@@ -32,6 +36,9 @@ export async function GET() {
         mode: db.ok ? "mariadb" : "fallback",
         db,
         time: new Date().toISOString(),
+        timeBangkok: tzDateTimeText(new Date(), { seconds: true }),
+        timeZone: APP_TZ,
+        serverTimeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         latencyMs: Date.now() - started,
       },
       { status: db.ok || process.env.DB_REQUIRED !== "1" ? 200 : 503 },
@@ -39,7 +46,7 @@ export async function GET() {
   } catch (err) {
     const { describeDbError } = await import("@/lib/db-diag");
     return NextResponse.json(
-      { ok: false, storage: "fallback", mode: "fallback", db: { configured: true, ok: false, error: describeDbError(err) }, time: new Date().toISOString() },
+      { ok: false, storage: "fallback", mode: "fallback", db: { configured: true, ok: false, error: describeDbError(err) }, time: new Date().toISOString(), timeBangkok: tzDateTimeText(new Date(), { seconds: true }), timeZone: APP_TZ },
       { status: process.env.DB_REQUIRED === "1" ? 503 : 200 },
     );
   }

@@ -8,6 +8,7 @@ import {
 import { useApp } from "./providers";
 import { Modal } from "./ui";
 import { cls } from "../lib/utils";
+import { tzDateTimeText, tzTimeSec } from "../lib/tz";
 
 interface DbHealthResponse {
   ok: boolean;
@@ -30,6 +31,9 @@ interface DbHealthResponse {
     error?: { code: string; message: string; hint: string; fix?: string; at: string } | null;
   };
   time?: string;
+  timeBangkok?: string;
+  timeZone?: string;
+  serverTimeZone?: string;
 }
 
 export function useDbHealth() {
@@ -218,7 +222,9 @@ export function DbDiagnostics() {
             <DiagRow label="เซิร์ฟเวอร์" value={health?.db?.server ?? "—"} />
             <DiagRow label="ตาราง ws_*" value={health?.db?.tables != null ? `${health.db.tables} ตาราง` : "—"} />
             <DiagRow label="charset" value={health?.db?.charset ?? "—"} />
-            <DiagRow label="ตรวจล่าสุด" value={health?.time ? new Date(health.time).toLocaleTimeString("th-TH") : "—"} />
+            <DiagRow label="เวลาระบบ (ไทย)" value={health?.timeBangkok ?? (health?.time ? tzDateTimeText(health.time, { seconds: true }) : "—")} />
+            <DiagRow label="timezone ของเซิร์ฟเวอร์" value={health?.serverTimeZone ?? "—"} />
+            <DiagRow label="ตรวจล่าสุด" value={health?.time ? `${tzTimeSec(health.time)} น.` : "—"} />
           </div>
         ) : (
           <>

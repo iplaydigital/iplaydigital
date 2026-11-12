@@ -11,7 +11,8 @@
     "lint": "next lint",
     "db:doctor": "tsx scripts/db-doctor.ts",
     "db:migrate": "tsx scripts/db-migrate.ts",
-    "super:setup": "tsx scripts/set-super-admin.ts"
+    "super:setup": "tsx scripts/set-super-admin.ts",
+    "db:time": "tsx scripts/db-time.ts"
   },
   "dependencies": {
     "clsx": "^2.1.1",

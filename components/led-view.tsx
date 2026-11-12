@@ -6,7 +6,8 @@ import {
 } from "lucide-react";
 import { useApp } from "./providers";
 import { Avatar } from "./ui";
-import { CAT_META, thaiFull, thaiTime, thaiShort, cls } from "../lib/utils";
+import { CAT_META, thaiTime, thaiShort, cls } from "../lib/utils";
+import { tzTimeSec, tzThaiDateFull } from "../lib/tz";
 
 export function LedView() {
   const { data, toast } = useApp();
@@ -166,13 +167,14 @@ export function LedScreen() {
           <div className="brand-mark" style={{ width: 52, height: 52, fontSize: 18 }}>iP</div>
           <div>
             <h1 style={{ fontSize: 26, fontWeight: 800 }}>iPlay Digital · Workspace Live</h1>
-            <p className="muted" style={{ fontSize: 13 }}>{thaiFull(now)} · {data.settings.branch}</p>
+            <p className="muted" style={{ fontSize: 13 }}>{tzThaiDateFull(now)} · {data.settings.branch}</p>
           </div>
         </div>
         <div style={{ textAlign: "right" }}>
           <div style={{ fontSize: 56, fontWeight: 800, letterSpacing: -2, fontVariantNumeric: "tabular-nums" }}>
-            {String(now.getHours()).padStart(2, "0")}:{String(now.getMinutes()).padStart(2, "0")}
-            <span style={{ fontSize: 22, color: "var(--muted)" }}>:{String(now.getSeconds()).padStart(2, "0")}</span>
+            {tzTimeSec(now).slice(0, 5)}
+            <span style={{ fontSize: 22, color: "var(--muted)" }}>:{tzTimeSec(now).slice(6)}</span>
+            <span style={{ fontSize: 14, color: "var(--muted)", marginLeft: 6 }}>น. (เวลาไทย)</span>
           </div>
           <div className="row" style={{ gap: 6, justifyContent: "flex-end", color: "var(--mint)", fontSize: 12 }}>
             <span className="pulse" /> LIVE · {data.storage === "mariadb" ? "MariaDB" : "Demo store"}

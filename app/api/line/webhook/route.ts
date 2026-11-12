@@ -94,7 +94,7 @@ async function recordIncomingChat(channelId: string, authorId: string, text: str
   if (!process.env.DB_HOST) return;
   try {
     const p = pool();
-    await p.query("INSERT INTO ws_messages (id, channel_id, author_id, body, kind, pinned, reactions, created_at) VALUES (?,?,?,?, 'text', 0, ?, NOW())", [
+    await p.query("INSERT INTO ws_messages (id, channel_id, author_id, body, kind, pinned, reactions, created_at) VALUES (?,?,?,?, 'text', 0, ?, UTC_TIMESTAMP())", [
       `lm_${Date.now().toString(36)}`,
       channelId,
       authorId,

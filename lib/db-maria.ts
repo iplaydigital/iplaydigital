@@ -6,7 +6,7 @@ import type {
   DriveFile, LeaveRequest, Member, Message, Project, Room, Settings, Subtask, Task,
 } from "./types";
 import type { StoreData } from "./store";
-import { tzDate as bkkDate, tzToday as bkkToday } from "./tz";
+import { sqlToIso, sqlUtc, tzDate as bkkDate, tzToday as bkkToday } from "./tz";
 import { seedData } from "./seed";
 import { uid, pad, remapColor } from "./utils";
 
@@ -40,7 +40,13 @@ export function pool() {
       connectTimeout: 8000,
       dateStrings: true,
       charset: "utf8mb4",
-      timezone: "+07:00",
+      // เก็บ/อ่าน DATETIME เป็น UTC เสมอ แล้วแปลงเป็นเวลาไทยตอนแสดงผล (lib/tz.ts)
+      timezone: "Z",
+    });
+    // ให้ทุก connection ใช้ session timezone = UTC
+    // (สำคัญกับคอลัมน์ TIMESTAMP และ DEFAULT CURRENT_TIMESTAMP / NOW() ซึ่งเปลี่ยนตาม session tz)
+    g.__iplayPool.on("connection", (conn) => {
+      conn.query("SET time_zone = '+00:00'");
     });
   }
   return g.__iplayPool;
@@ -53,9 +59,13 @@ const j = <T,>(v: unknown, fallback: T): T => {
   }
   return v as T;
 };
-const iso = (v: string | null | undefined) => (v ? new Date(v.replace(" ", "T")).toISOString() : new Date().toISOString());
+/**
+ * อ่าน DATETIME จาก DB — ตีความเป็น UTC เสมอ (ฝั่งเขียนใช้ sqlUtc())
+ * เดิมใช้ new Date(v) ซึ่งตีความเป็น timezone ของเซิร์ฟเวอร์ → เวลาลงเวลาเพี้ยน 7 ชม. เมื่อเซิร์ฟเวอร์เป็น Asia/Bangkok
+ */
+const iso = (v: string | null | undefined) => sqlToIso(v) ?? new Date().toISOString();
 const hm = (v: string | null | undefined) => (v ? v.slice(0, 5) : undefined);
-const dt = () => new Date().toISOString().slice(0, 19).replace("T", " ");
+const dt = () => sqlUtc();
 const todayStr = () => bkkToday();
 
 export async function ensureSchema() {
@@ -134,7 +144,7 @@ export async function seedDb(conn: mysql.PoolConnection) {
     }
     for (const c of t.comments) {
       await q(`INSERT INTO ws_task_comments (id,task_id,author_id,body,at) VALUES (?,?,?,?,?)`,
-        [c.id, t.id, c.authorId, c.text, c.at.slice(0, 19).replace("T", " ")]);
+        [c.id, t.id, c.authorId, c.text, sqlUtc(c.at)]);
     }
   }
   for (const e of d.events) {
@@ -151,12 +161,12 @@ export async function seedDb(conn: mysql.PoolConnection) {
   }
   for (const f of d.files) {
     await q(`INSERT INTO ws_files (id,name,type,url,size,owner_id,shared_at) VALUES (?,?,?,?,?,?,?)`,
-      [f.id, f.name, f.type, f.url, f.size, f.ownerId, f.sharedAt.slice(0, 19).replace("T", " ")]);
+      [f.id, f.name, f.type, f.url, f.size, f.ownerId, sqlUtc(f.sharedAt)]);
   }
   for (const m of d.messages) {
     await q(`INSERT INTO ws_messages (id,channel_id,author_id,body,kind,file_json,pinned,reactions,created_at) VALUES (?,?,?,?,?,?,?,?,?)`,
       [m.id, m.channelId, m.authorId, m.text, m.kind, m.file ? JSON.stringify(m.file) : null,
-       m.pinned ? 1 : 0, JSON.stringify(m.reactions ?? []), m.at.slice(0, 19).replace("T", " ")]);
+       m.pinned ? 1 : 0, JSON.stringify(m.reactions ?? []), sqlUtc(m.at)]);
   }
   for (const r of d.rooms) {
     await q(`INSERT INTO ws_rooms (id,name,floor,capacity,color,amenities,screen) VALUES (?,?,?,?,?,?,?)`,
@@ -168,19 +178,19 @@ export async function seedDb(conn: mysql.PoolConnection) {
   }
   for (const l of d.leaves) {
     await q(`INSERT INTO ws_leaves (id,user_id,type,date_from,date_to,days,reason,status,approver_id,created_at) VALUES (?,?,?,?,?,?,?,?,?,?)`,
-      [l.id, l.userId, l.type, l.from, l.to, l.days, l.reason, l.status, l.approverId ?? null, l.createdAt.slice(0, 19).replace("T", " ")]);
+      [l.id, l.userId, l.type, l.from, l.to, l.days, l.reason, l.status, l.approverId ?? null, sqlUtc(l.createdAt)]);
   }
   for (const c of d.checkins) {
     await q(`INSERT INTO ws_checkins (id,user_id,at_time,place,lat,lng,distance_m,mode,note,map_url) VALUES (?,?,?,?,?,?,?,?,?,?)`,
-      [c.id, c.userId, c.at.slice(0, 19).replace("T", " "), c.place, c.lat, c.lng, c.distance, c.mode, c.note ?? null, c.mapUrl]);
+      [c.id, c.userId, sqlUtc(c.at), c.place, c.lat, c.lng, c.distance, c.mode, c.note ?? null, c.mapUrl]);
   }
   for (const r of d.aiRuns) {
     await q(`INSERT INTO ws_ai_runs (id,agent_id,task_id,action,detail,duration_sec,tokens,status,at_time) VALUES (?,?,?,?,?,?,?,?,?)`,
-      [r.id, r.agentId, r.taskId ?? null, r.action, r.detail, r.durationSec, r.tokens, r.status, r.at.slice(0, 19).replace("T", " ")]);
+      [r.id, r.agentId, r.taskId ?? null, r.action, r.detail, r.durationSec, r.tokens, r.status, sqlUtc(r.at)]);
   }
   for (const a of d.activity) {
     await q(`INSERT INTO ws_activity (id,actor_id,body,kind,at_time) VALUES (?,?,?,?,?)`,
-      [a.id, a.actorId, a.text, a.kind, a.at.slice(0, 19).replace("T", " ")]);
+      [a.id, a.actorId, a.text, a.kind, sqlUtc(a.at)]);
   }
   await q(`INSERT INTO ws_settings (id,data) VALUES ('main', ?) ON DUPLICATE KEY UPDATE data=VALUES(data)`, [JSON.stringify(d.settings)]);
   console.log("[db] seeded demo workspace into MariaDB");

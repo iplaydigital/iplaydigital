@@ -134,3 +134,80 @@ export function tzDateTextShort(input: string | number | Date = new Date()) {
   const p = tzParts(input);
   return `${Number(p.day)} ${TH_SHORT[Number(p.month) - 1]} ${String(Number(p.year) + 543).slice(-2)}`;
 }
+
+const TH_DOW_FULL = ["อาทิตย์", "จันทร์", "อังคาร", "พุธ", "พฤหัสบดี", "ศุกร์", "เสาร์"];
+const TH_MONTH_FULL = [
+  "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน",
+  "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม",
+];
+
+/** วันที่เต็มแบบไทยตามเวลาไทย เช่น “วันพฤหัสบดี 6 พฤศจิกายน 2569” */
+export function tzThaiDateFull(input: string | number | Date = new Date()): string {
+  const p = tzParts(input);
+  return `วัน${TH_DOW_FULL[p.weekday]} ${Number(p.day)} ${TH_MONTH_FULL[Number(p.month) - 1]} ${Number(p.year) + 543}`;
+}
+
+// ─────────────────────────────────────────────────────────────
+//  เวลาสำหรับเก็บในฐานข้อมูล (คอลัมน์ DATETIME)
+//  ข้อตกลงกลาง: “เก็บเป็น UTC เสมอ” แล้วค่อยแปลงเป็นเวลาไทยตอนแสดงผล
+//   • ฝั่งเขียน: sqlUtc() → "YYYY-MM-DD HH:mm:ss" (UTC)
+//   • ฝั่งอ่าน : sqlToIso() → ISO ที่มี Z (ตีความว่าเป็น UTC)
+//  ทำแบบนี้ทำให้ไม่ว่าเซิร์ฟเวอร์จะตั้ง timezone ไว้เป็นอะไร เวลาที่แสดงจะตรง
+//  กับเวลาไทย (Asia/Bangkok) เสมอ
+// ─────────────────────────────────────────────────────────────
+
+/** เขียนลง DATETIME แบบ UTC */
+export function sqlUtc(input: string | number | Date = new Date()): string {
+  const d = input instanceof Date ? input : new Date(input);
+  const src = Number.isNaN(d.getTime()) ? new Date() : d;
+  return src.toISOString().slice(0, 19).replace("T", " ");
+}
+
+/**
+ * อ่านค่าจาก DATETIME → ISO (UTC)
+ * - "2026-11-06 07:46:14"       → "2026-11-06T07:46:14.000Z" (ตีความเป็น UTC)
+ * - "2026-11-06T07:46:14.871Z"  → คงค่าเดิม
+ * - "2026-11-05 20:00:00+07:00" → แปลงเป็น UTC
+ * - ค่าที่อ่านไม่ได้ → null (ไม่เดาเป็น epoch)
+ */
+export function sqlToIso(value: string | number | Date | null | undefined): string | null {
+  if (value == null || value === "") return null;
+  if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : value.toISOString();
+  if (typeof value === "number") {
+    const d = new Date(value);
+    return Number.isNaN(d.getTime()) ? null : d.toISOString();
+  }
+
+  const raw = String(value).trim();
+  const m = raw.match(
+    /^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2})(?::(\d{2})(?:\.(\d{1,9}))?)?)?(Z|[+-]\d{2}:?\d{2})?$/,
+  );
+  if (!m) return null;
+
+  const [, y, mo, d, h = "00", mi = "00", sec = "00", frac = "0", tz] = m;
+  const ms = Math.floor(Number(`0.${frac}`) * 1000);
+  let time = Date.UTC(Number(y), Number(mo) - 1, Number(d), Number(h), Number(mi), Number(sec), ms);
+  if (Number.isNaN(time)) return null;
+  if (tz && tz !== "Z") {
+    const sign = tz.startsWith("-") ? -1 : 1;
+    const [oh, om] = tz.slice(1).replace(":", "").match(/\d{2}/g) ?? ["0", "0"];
+    time -= sign * (Number(oh) * 60 + Number(om)) * 60000;
+  }
+  const out = new Date(time);
+  if (Number.isNaN(out.getTime())) return null;
+  // กันค่าเพี้ยน เช่นเดือน 13 ที่ Date.UTC จะปัดไปปีถัดไป
+  const iso = out.toISOString();
+  if (iso.slice(0, 4) !== y) return null;
+  return iso;
+}
+
+/** แสดงค่าดิบจาก DB พร้อมการตีความ (ใช้ในหน้า health/diagnose) */
+export function describeSqlTime(value: string | null | undefined) {
+  const iso = sqlToIso(value);
+  return {
+    raw: value ?? null,
+    iso,
+    utc: iso ? `${iso.slice(11, 19)} UTC` : null,
+    bangkok: iso ? `${tzTime(iso)} น. (${tzDate(iso)})` : null,
+  };
+}
