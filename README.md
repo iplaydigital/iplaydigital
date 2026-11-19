@@ -363,6 +363,8 @@ iplaydigital/
 ├── scripts/db-seed.ts          # npm run db:seed
 ├── scripts/db-doctor.ts        # npm run db:doctor (ตรวจ env → TCP → login → schema)
 ├── scripts/db-time.ts          # npm run db:time (ตรวจ/ซ่อมเวลาที่เก็บใน DB ไม่ตรง Bangkok)
+├── scripts/prod-check.ts       # npm run prod:check (โค้ดล่าสุดขึ้น production แล้วหรือยัง + สุขภาพระบบ)
+├── scripts/pentest.ts          # npm run pentest (ตรวจความปลอดภัย non-destructive + รายงาน)
 ├── docker-compose.yml          # MariaDB 11 + utf8mb4
 └── .env.example
 ```
@@ -458,6 +460,26 @@ npm run db:time              # ตรวจว่าเวลาที่เก�
 `ws_checkins`, `ws_ai_runs`, `ws_activity`, `ws_settings`, **`ws_users`**, **`ws_reports`**,
 **`ws_departments`**, **`ws_teams`**, **`ws_audit_logs`**, **`ws_login_logs`**
 > คอลัมน์ใหม่จะถูกเพิ่มอัตโนมัติเมื่อเริ่มระบบ (`ALTER TABLE ... ADD COLUMN` แบบข้ามหากมีอยู่แล้ว)
+
+### 🚀 ทุกครั้งที่ขึ้น production — recheck ให้เป็น final + pentest
+```bash
+git pull && npm install && npm run build && pm2 restart <name> --update-env
+
+npm run prod:check        # โค้ดล่าสุดขึ้นหรือยัง + เวลา + DB + endpoint ที่ต้องล็อกอิน + headers
+npm run pentest           # ตรวจความปลอดภัย (non-destructive) → รายงาน reports/pentest-*.md
+npm run verify:prod       # รันทั้งสองอย่างต่อกัน
+```
+- `prod:check` เทียบ **commit ที่ build บน production** (`/api/health` → `build.commit`) กับ HEAD ในเครื่อง
+  → รู้ทันทีว่า migrate/อัปเดตออนไลน์แล้วหรือยัง (exit code ≠ 0 = ยังไม่ final)
+- `pentest` ตรวจ headers/TLS/cookie flags/สิทธิ์ (authz)/input validation/CSRF/info disclosure/rate limit
+- รายละเอียดขั้นตอน: `docs/PROD-CHECK.md` · ขอบเขตและข้อที่ต้องตรวจมือ: `docs/PENTEST.md`
+- ต้องตั้ง `PROD_URL`, `PROD_USER`, `PROD_PASSWORD`, (ทางเลือก) `PENTEST_MEMBER_USER/PASSWORD` ใน `.env`
+
+### ความปลอดภัยพื้นฐานที่ฝังในแอปแล้ว
+- security headers ทุก response: CSP, HSTS, nosniff, Referrer-Policy, Permissions-Policy, `frame-ancestors 'self'`, ปิด `x-powered-by`
+- rate limit ที่ `/api/auth/login` (ต่อ IP และต่อบัญชี) → ตอบ `429` พร้อม `retry-after`
+- `/api/health` แสดงรายละเอียด DB เฉพาะ admin/support หรือผู้ถือ `HEALTH_TOKEN` (header `x-health-token`)
+- ใช้ `npm run build` หลัง `git pull` เสมอ เพื่อให้ข้อมูล `build.commit` ตรงกับโค้ดที่รันอยู่
 
 ### 🕒 เวลา (สำคัญ: ลงเวลา/เข้างาน)
 - **ข้อตกลงกลาง: เก็บเป็น UTC เสมอ แล้วแสดงผลเป็นเวลาไทย (Asia/Bangkok)** — ตัวช่วยทั้งหมดอยู่ใน `lib/tz.ts`

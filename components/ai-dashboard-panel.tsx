@@ -12,6 +12,7 @@ import { Spark } from "./charts";
 import { useApp } from "./providers";
 import { PROVIDERS, shortTokens, thb, type AiProvider } from "../lib/ai-shared";
 import { cls, relTime } from "../lib/utils";
+import { tzDateTimeText } from "../lib/tz";
 
 interface Bucket { key: string; label: string; tokensIn: number; tokensOut: number; tokens: number; cost: number; calls: number }
 interface Sum { tokens: number; cost: number; calls: number }
@@ -336,7 +337,7 @@ function EstimateBox({ projects }: { projects: { id: string; code: string; name:
             <div className={cls("side-card", result.quota.fitToday === false && "warn")} style={{ fontSize: 11.5 }}>
               {result.quota.fitToday === false ? <AlertTriangle size={12} /> : <Sparkles size={12} />} {result.quota.note}
               {result.quota.dailyRunsNeeded && result.quota.dailyRunsNeeded > 1 ? ` (ต้องใช้ ${result.quota.dailyRunsNeeded} รอบวัน)` : ""}
-              {result.quota.nextResetAt ? ` · รีเซ็ต ${new Date(result.quota.nextResetAt).toLocaleString("th-TH")}` : ""}
+              {result.quota.nextResetAt ? ` · รีเซ็ต ${tzDateTimeText(result.quota.nextResetAt)}` : ""}
             </div>
 
             {result.rows.length > 0 && (

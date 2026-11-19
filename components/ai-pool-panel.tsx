@@ -16,6 +16,7 @@ import {
   type AiProvider, type Capability, type KeyStatus,
 } from "../lib/ai-shared";
 import { cls, relTime } from "../lib/utils";
+import { tzDateTimeText, tzTime } from "../lib/tz";
 
 export interface PoolKeyPublic {
   id: string;
@@ -177,7 +178,7 @@ export function ApiPoolPanel() {
           <AlertTriangle size={14} />
           <span>
             ทุกคีย์ใน pool ใช้โควต้าหมดแล้ว — ระบบจะพักงาน AI และกลับมาทำงานอัตโนมัติ
-            {summary?.nextResetAt ? ` เวลา ${new Date(summary.nextResetAt).toLocaleString("th-TH")}` : ""}
+            {summary?.nextResetAt ? ` เวลา ${tzDateTimeText(summary.nextResetAt)}` : ""}
           </span>
         </div>
       )}
@@ -202,7 +203,7 @@ export function ApiPoolPanel() {
           <div className="k-top"><span className="kpi-ico" style={{ background: "var(--grad-amber)" }}><RotateCcw size={16} /></span></div>
           <div>
             <div className="kpi-val" style={{ fontSize: 15 }}>
-              {summary?.nextResetAt ? new Date(summary.nextResetAt).toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" }) : "—"}
+              {summary?.nextResetAt ? tzTime(summary.nextResetAt) : "—"}
             </div>
             <div className="kpi-lbl">รีเซ็ตรอบถัดไป</div>
           </div>
@@ -248,7 +249,7 @@ export function ApiPoolPanel() {
               </div>
               {r.status?.nextResetAt && !r.status.canUse && (
                 <div className="tiny" style={{ color: "var(--amber)" }}>
-                  รีเซ็ต {new Date(r.status.nextResetAt).toLocaleString("th-TH", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
+                  รีเซ็ต {tzDateTimeText(r.status.nextResetAt)}
                 </div>
               )}
             </div>
