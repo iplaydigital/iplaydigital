@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { APP_TZ, describeSqlTime, sqlToIso, sqlUtc, tzDate, tzDateTimeText, tzTimeSec } from "../../../../lib/tz";
+import { BUILD } from "../../../../lib/version";
+import { canSeeHealthDetails } from "../../../../lib/health-access";
 
 export const dynamic = "force-dynamic";
 
@@ -7,13 +9,15 @@ export const dynamic = "force-dynamic";
  * GET /api/health/time — ตรวจว่า “เวลาของระบบ” ตรงกับเวลาไทยหรือไม่
  * ใช้ไล่ปัญหากรณีลงเวลา/เข้างานแล้วเวลาขึ้นไม่ตรง Bangkok
  */
-export async function GET() {
+export async function GET(req: Request) {
   const now = new Date();
   const configuredTz = process.env.TZ ?? null;
   const resolvedTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
+  const access = await canSeeHealthDetails(req);
   const payload: Record<string, unknown> = {
     ok: true,
+    build: { commit: BUILD.commit || null, branch: BUILD.branch || null, builtAt: BUILD.builtAt || null },
     policy: {
       display: APP_TZ,
       storage: "UTC (DATETIME/TIMESTAMP) → แปลงเป็นเวลาไทยตอนแสดงผล",
@@ -40,8 +44,10 @@ export async function GET() {
     },
   };
 
-  // ตรวจเวลาของ MariaDB + ตัวอย่างรายการเช็คอินล่าสุด
-  if (process.env.DB_HOST) {
+  // รายละเอียดฐานข้อมูล (timezone ของ DB / เช็คอินล่าสุด) — เฉพาะ admin/support หรือ x-health-token
+  if (process.env.DB_HOST && !access.ok) {
+    payload.database = { restricted: true, note: "ต้องล็อกอินเป็น admin/support หรือส่ง header x-health-token" };
+  } else if (process.env.DB_HOST) {
     try {
       const { pool } = await import("../../../../lib/db-maria");
       const p = pool();

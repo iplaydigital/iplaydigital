@@ -12,7 +12,10 @@
     "db:doctor": "tsx scripts/db-doctor.ts",
     "db:migrate": "tsx scripts/db-migrate.ts",
     "super:setup": "tsx scripts/set-super-admin.ts",
-    "db:time": "tsx scripts/db-time.ts"
+    "db:time": "tsx scripts/db-time.ts",
+    "prod:check": "tsx scripts/prod-check.ts",
+    "pentest": "tsx scripts/pentest.ts",
+    "verify:prod": "tsx scripts/prod-check.ts && tsx scripts/pentest.ts"
   },
   "dependencies": {
     "clsx": "^2.1.1",
