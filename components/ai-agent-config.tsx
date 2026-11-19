@@ -17,6 +17,7 @@ import {
   type AiProvider, type Capability, type SkillKind, type SkillRuntime,
 } from "../lib/ai-shared";
 import { cls } from "../lib/utils";
+import { tzDateTimeText } from "../lib/tz";
 
 export interface AgentConfigPublic {
   id: string;
@@ -341,7 +342,7 @@ export function AgentConfigModal({
                   {poolRow
                     ? poolRow.canUse
                       ? `พร้อมใช้ · เหลือ ${shortTokens(poolRow.remainingToday)} tokens วันนี้`
-                      : `โควต้าหมด — รอรีเซ็ต ${poolRow.nextResetAt ? new Date(poolRow.nextResetAt).toLocaleString("th-TH") : "-"}`
+                      : `โควต้าหมด — รอรีเซ็ต ${poolRow.nextResetAt ? tzDateTimeText(poolRow.nextResetAt) : "-"}`
                     : "ยังไม่มีคีย์ใน pool — เพิ่มได้ที่แท็บ API Pool"}
                 </span>
               )}

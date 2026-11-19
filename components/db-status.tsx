@@ -133,7 +133,7 @@ export function DbFixModal({ onClose }: { onClose: () => void }) {
   return (
     <Modal
       title="เชื่อมต่อฐานข้อมูลไม่สำเร็จ"
-      subtitle={err ? `${err.code} · ${new Date(err.at).toLocaleString("th-TH")}` : "ตรวจสอบการตั้งค่า DB_*"}
+      subtitle={err ? `${err.code} · ${tzDateTimeText(err.at, { seconds: true })}` : "ตรวจสอบการตั้งค่า DB_*"}
       icon={<Database size={16} />}
       onClose={onClose}
       wide
